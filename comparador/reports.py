@@ -6,7 +6,7 @@ import html
 from .i18n import tr, language
 from .models import duration_text
 
-HEADERS = ["Path", "Folder", "Status", "Bytes", "Duration", "Resolution", "SHA-256", "Exact matches", "Visual candidates", "Visual details", "Error"]
+HEADERS = ["Path", "Folder", "Status", "Bytes", "Duration", "Resolution", "SHA-256", "Exact matches", "Visual candidates", "Visual details", "Error", "Comparison notes"]
 
 
 def report_rows(result):
@@ -20,7 +20,7 @@ def report_rows(result):
         yield [record.path, tr("Primary") if record.root == "primary" else tr("Secondary"), tr(result.display_status(key)), record.size,
                duration_text(record.metadata.get("duration")), f"{record.metadata.get('width',0)} x {record.metadata.get('height',0)}" if record.metadata else "",
                record.digest, "\n".join(p.path for p in result.exact_peers(key)), "\n".join(p.path for p,_ in visual), "\n".join(details),
-               "\n".join(x for x in (record.error, record.video_error) if x)]
+               "\n".join(x for x in (record.error, record.video_error) if x), result.comparison_note(key)]
 
 
 def csv_safe(value):

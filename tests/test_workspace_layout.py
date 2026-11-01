@@ -95,3 +95,35 @@ def test_below_layout_and_active_review_survive_settings(qtbot, roots, tmp_path)
 def test_unknown_comparison_position_rejected():
     with pytest.raises(ValueError):
         Preferences(comparison_position='unknown').validate()
+
+
+@pytest.mark.parametrize('side,button', [('left', 'keep'), ('left', 'remove'), ('right', 'keep'), ('right', 'remove')])
+def test_default_sort_decision_preserves_active_row_and_scroll(qtbot, roots, tmp_path, side, button):
+    window = workspace(qtbot, roots, tmp_path)
+    window.table.selectRow(35)
+    qtbot.wait(10)
+    key = window.current_key
+    position = window.table.verticalScrollBar().value()
+    assert position > 0
+    card = window.left_preview if side == 'left' else window.right_preview
+    qtbot.mouseClick(getattr(card, button), Qt.MouseButton.LeftButton)
+    assert window.current_key == key and window.table.currentRow() == 35
+    assert window.table.verticalScrollBar().value() == position
+    assert window.table.hasFocus()
+    selected = set(window.checked_keys)
+    qtbot.keyClick(window.table, Qt.Key.Key_Down)
+    assert window.table.currentRow() == 36
+    assert window.checked_keys == selected
+    qtbot.waitUntil(lambda: not window.jobs, timeout=5000)
+
+
+def test_selection_header_does_not_sort_by_changing_check_labels(qtbot, roots, tmp_path):
+    from PySide6.QtCore import QPoint
+    window = workspace(qtbot, roots, tmp_path)
+    header = window.table.horizontalHeader()
+    before = window.visible_keys()
+    qtbot.mouseClick(header.viewport(), Qt.MouseButton.LeftButton, pos=QPoint(20, 15))
+    assert window.visible_keys() == before
+    assert window.checked_keys == set(before)
+    assert header.sortIndicatorSection() == 1
+    qtbot.waitUntil(lambda: not window.jobs, timeout=5000)

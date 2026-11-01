@@ -57,7 +57,9 @@ Quick mode seeks to at most 24 sample points instead of decoding the entire vide
 
 If the quick decoder fails, an alternative FFmpeg reader retries the same sample grid, with a 45-second total limit and a 12-second limit per sample. It does not switch to full-video decoding. If both readers fail, the file remains an error. Embedded cover images are excluded from video analysis and previews. Version 1.2.2 refreshes video metadata and fingerprints once to use the corrected stream selection, while retaining exact-file hashes.
 
-**Video read error** identifies a video that could not be read. **Comparison incomplete** means the file itself was read but other failures prevent ruling out additional matches. Neither state confirms that a copy is absent. Open **Issues** for the actual failed files and their reader messages. You can also export a local report to retain these details.
+**Video read error** identifies a video that could not be read. **No matches (partial comparison)** means that the video was analyzed and compared with readable videos, while other videos were excluded by read failures. **Comparison incomplete** covers work that remains unfinished. None of these states confirms absence from the whole collection. Only failed or unfinished files appear in the issues filter. Non-video files retain their exact-comparison status when video decoding fails elsewhere. Exported reports include a separate **Comparison notes** column for explanations, keeping actual errors in the error column.
+
+FLV inputs are identified by their file signature, including files renamed with another extension. Readers tolerate inconsistent previous-tag size fields using FFmpeg's documented FLV option, without modifying or converting the original files. Existing successful fingerprints remain cached, and failed videos are retried on the next scan.
 
 Similarity is a fingerprint score, not a probability that two files are interchangeable. Strong crops, watermarks, speed changes and extensive edits may not match. Lowering a threshold reuses existing fingerprints without decoding again. Quick and full fingerprints are cached separately.
 
@@ -68,7 +70,7 @@ Similarity is a fingerprint score, not a probability that two files are intercha
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.1/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.2/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 

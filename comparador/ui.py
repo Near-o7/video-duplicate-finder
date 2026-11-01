@@ -121,6 +121,8 @@ class MainWindow(QMainWindow):
         self.comparison_sized = False
         build_window(self)
         self.apply_result_columns()
+        self.last_result_sort = (1, Qt.SortOrder.AscendingOrder)
+        self.table.horizontalHeader().sortIndicatorChanged.connect(self.remember_result_sort)
         self.table.horizontalHeader().sectionResized.connect(
             lambda index, previous, width, table=self.table: self.column_width_changed(table, index, width))
         self.menuBar().clear()
@@ -140,6 +142,14 @@ class MainWindow(QMainWindow):
     def apply_result_columns(self):
         for index, (key, _) in enumerate(RESULT_COLUMNS):
             self.table.setColumnHidden(index, key not in self.preferences.visible_columns)
+
+    def remember_result_sort(self, column, order):
+        # The first header selects files. Sorting by its changing decision text
+        # would move the current review row as soon as a copy is marked.
+        if column == 0:
+            self.table.sortItems(*self.last_result_sort)
+        else:
+            self.last_result_sort = (column, order)
 
     def column_width_changed(self, table, index, width):
         if table is not self.table or table.isColumnHidden(index) or not 48 <= width <= 2400:
@@ -222,6 +232,8 @@ class MainWindow(QMainWindow):
         self.apply_preferences(updated)
 
     def apply_preferences(self, preferences):
+        sort_column = self.table.horizontalHeader().sortIndicatorSection()
+        sort_order = self.table.horizontalHeader().sortIndicatorOrder()
         active_key = self.current_key
         peer_key = self.right_preview.record.key if self.right_preview.record else None
         comparison_hidden = self.preview_scroll.isHidden()
@@ -249,6 +261,7 @@ class MainWindow(QMainWindow):
         old.deleteLater()
         self.setWindowTitle(tr('Video Duplicate Finder {p0}', p0=__version__))
         if result:
+            self.table.sortItems(sort_column, sort_order)
             for control, value in [(self.scope_filter,scope),(self.view_filter,view)]:
                 control.blockSignals(True)
                 control.setCurrentIndex(max(0, control.findData(value)))
@@ -498,7 +511,7 @@ class MainWindow(QMainWindow):
                 role = 'primary' if filter_index == 5 else 'secondary'
                 if f.root != role or not (any((p.root == role for p in peers)) or any((p.root == role for p, _ in visual))):
                     continue
-            if filter_index == 7 and (not (f.error or f.video_error or classification == 'Error or pending')):
+            if filter_index == 7 and (not (f.error or f.video_error or (classification == 'Error or pending' and result.display_status(key) != 'No matches (partial comparison)'))):
                 continue
             row = self.table.rowCount()
             self.table.insertRow(row)
@@ -530,7 +543,7 @@ class MainWindow(QMainWindow):
             for col, (text, sort) in enumerate(zip(values, sorts), 1):
                 item = SortItem(text)
                 item.setData(Qt.ItemDataRole.UserRole + 1, sort)
-                detail = f.error or f.video_error or (tr('This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.') if status == 'Comparison incomplete' else '')
+                detail = f.error or f.video_error or result.comparison_note(key) or (tr('This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.') if status == 'Comparison incomplete' else '')
                 item.setToolTip(match_tooltip if col == 2 and relations else f.path + '\n' + tr(status) + ('\n' + detail if detail else ''))
                 if col == 7:
                     item.setText(tr(text))
@@ -713,7 +726,7 @@ class MainWindow(QMainWindow):
             span = max(spans, key=lambda s: s[1] - s[0], default=[0,f.metadata.get('duration',0),0,peer.metadata.get('duration',0)])
             times = [[span[0] + (span[1] - span[0]) * q for q in (0.15, 0.5, 0.85)], [span[2] + (span[3] - span[2]) * q for q in (0.15, 0.5, 0.85)]]
         else:
-            self.evidence.setText(tr('Identical copy confirmed with a full SHA-256 hash.') if peer else f.error or f.video_error or (tr('This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.') if self.result.display_status(f.key) == 'Comparison incomplete' else tr(self.result.display_status(f.key))))
+            self.evidence.setText(tr('Identical copy confirmed with a full SHA-256 hash.') if peer else f.error or f.video_error or self.result.comparison_note(f.key) or (tr('This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.') if self.result.display_status(f.key) == 'Comparison incomplete' else tr(self.result.display_status(f.key))))
             times = [[record.metadata.get('duration', 0) * q for q in (0.15, 0.5, 0.85)] if record else [] for record in (f, peer)]
         self.load_thumbnails([f, peer], times)
         self.update_preview_decisions()
@@ -739,6 +752,9 @@ class MainWindow(QMainWindow):
                     card.decision.clear()
 
     def choose_preview(self, keep_left):
+        active_key = self.current_key
+        vertical_position = self.table.verticalScrollBar().value()
+        horizontal_position = self.table.horizontalScrollBar().value()
         keep = self.left_preview.record if keep_left else self.right_preview.record
         remove = self.right_preview.record if keep_left else self.left_preview.record
         if not keep or not remove or self.worker:
@@ -776,7 +792,11 @@ class MainWindow(QMainWindow):
         if remove.key in keys:
             self.preferred_keepers[remove.key] = keep.key
         self.set_checked(keys)
+        if active_key in self.visible_keys():
+            self.table.setCurrentCell(self.visible_keys().index(active_key), 1)
         self.table.setFocus(Qt.FocusReason.OtherFocusReason)
+        self.table.verticalScrollBar().setValue(vertical_position)
+        self.table.horizontalScrollBar().setValue(horizontal_position)
         if restored:
             self.notice.setText(tr('{count} earlier selections were kept because their reference is now selected for removal. Review them before choosing another reference.', count=len(restored)))
             self.notice.show()

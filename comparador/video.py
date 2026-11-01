@@ -50,8 +50,17 @@ def cancel_check(cancel):
     if cancel and cancel.is_set():
         raise Cancelled()
 
+def media_input_options(path):
+    """Identify FLV by its signature, independently of the filename extension."""
+    try:
+        with open(path, 'rb') as source:
+            is_flv = source.read(3) == b'FLV'
+    except OSError:
+        return []
+    return ['-flv_ignore_prevtag', '1'] if is_flv else []
+
 def probe(path, cancel):
-    raw = run_media([binary('ffprobe'), '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(path)], cancel)
+    raw = run_media([binary('ffprobe'), '-v', 'error', *media_input_options(path), '-show_format', '-show_streams', '-of', 'json', str(path)], cancel)
     data = json.loads(raw)
     streams = [s for s in data.get('streams', []) if s.get('codec_type') == 'video' and (not s.get('disposition', {}).get('attached_pic'))]
     if not streams:
@@ -83,7 +92,7 @@ def perceptual_hash(frame):
 
 def fingerprint(path, metadata, cancel):
     step = 1.0 if metadata['duration'] >= 3 else 0.25
-    raw = run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-threads', '2', '-i', str(path), '-map', '0:V:0', '-an', '-vf', f'fps=1/{step}:start_time=0,scale=32:32:flags=area,format=gray', '-threads', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'], cancel)
+    raw = run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-threads', '2', *media_input_options(path), '-i', str(path), '-map', '0:V:0', '-an', '-vf', f'fps=1/{step}:start_time=0,scale=32:32:flags=area,format=gray', '-threads', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'], cancel)
     hashes = []
     for i in range(len(raw) // 1024):
         cancel_check(cancel)
@@ -124,7 +133,7 @@ def _fast_ffmpeg(path, metadata, cancel, progress=None):
             raise ValueError(tr('The alternative video reader exceeded its time limit.'))
         if progress:
             progress(i + 1, len(targets))
-        raw = run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-threads', '2', '-ss', str(float(target)), '-i', str(path),
+        raw = run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-threads', '2', '-ss', str(float(target)), *media_input_options(path), '-i', str(path),
                          '-map', '0:V:0', '-frames:v', '1', '-an', '-vf', 'scale=32:32:flags=area,format=gray',
                          '-threads', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'], cancel, timeout=min(12, remaining))
         if len(raw) != 1024:
@@ -142,7 +151,8 @@ def _fast_pyav(path, metadata, cancel, progress=None):
     import av
     step, targets = _sample_grid(metadata)
     hashes = []
-    with av.open(str(path), timeout=(10, 10)) as container:
+    options = {'flv_ignore_prevtag': '1'} if media_input_options(path) else {}
+    with av.open(str(path), timeout=(10, 10), options=options) as container:
         index = metadata.get('video_stream_index')
         stream = container.streams[index] if index is not None else container.streams.video[0]
         stream.codec_context.thread_count = 2
@@ -284,4 +294,4 @@ def find_similar(records, similarity, coverage, cancel, progress=None):
     return matches
 
 def thumbnail(path, at, cancel, width=480, height=270):
-    return run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-ss', str(max(0, at)), '-i', str(path), '-map', '0:V:0', '-frames:v', '1', '-vf', f'scale={int(width)}:{int(height)}:force_original_aspect_ratio=decrease', '-threads', '1', '-f', 'image2pipe', '-vcodec', 'mjpeg', 'pipe:1'], cancel, timeout=60)
+    return run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-ss', str(max(0, at)), *media_input_options(path), '-i', str(path), '-map', '0:V:0', '-frames:v', '1', '-vf', f'scale={int(width)}:{int(height)}:force_original_aspect_ratio=decrease', '-threads', '1', '-f', 'image2pipe', '-vcodec', 'mjpeg', 'pipe:1'], cancel, timeout=60)
