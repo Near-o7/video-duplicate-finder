@@ -98,6 +98,7 @@ class MainWindow(QMainWindow):
         self.new_scan = False
         self.last_progress = 0.0
         self.close_pending = False
+        self.comparison_sized = False
         self.setWindowTitle(tr('Video Duplicate Finder {p0}', p0=f'{__version__}'))
         self.setWindowIcon(icon('app'))
         self.resize(1440, 960)
@@ -113,6 +114,7 @@ class MainWindow(QMainWindow):
         QApplication.instance().styleHints().colorSchemeChanged.connect(self.system_theme_changed)
 
     def _build(self):
+        self.comparison_sized = False
         build_window(self)
         self.apply_result_columns()
         self.menuBar().clear()
@@ -200,6 +202,13 @@ class MainWindow(QMainWindow):
         self.apply_preferences(updated)
 
     def apply_preferences(self, preferences):
+        active_key = self.current_key
+        peer_key = self.right_preview.record.key if self.right_preview.record else None
+        comparison_hidden = self.preview_scroll.isHidden()
+        setup_hidden = self.setup_panel.isHidden()
+        notice_hidden = self.notice.isHidden()
+        split_sizes = self.results_split.sizes()
+        old_position = self.preferences.comparison_position
         paths = (self.primary_path.text(), self.secondary_path.text())
         controls = [self.folder_mode, self.file_filter, self.analysis_mode, self.video_profile]
         indices = [c.currentIndex() for c in controls]
@@ -236,6 +245,21 @@ class MainWindow(QMainWindow):
             self.scan_done(result)
             self.preferred_keepers = preferred_keepers
             self.set_checked(selection)
+            if active_key in self.visible_keys():
+                self.table.selectRow(self.visible_keys().index(active_key))
+                for index, (peer, _) in enumerate(self.peer_entries):
+                    if peer.key == peer_key:
+                        self.peer_combo.setCurrentIndex(index)
+                        break
+            self.setup_panel.setVisible(not setup_hidden)
+            self.setup_toggle.setText(tr('Edit folders and scan options') if setup_hidden else tr('Hide scan options'))
+            self.notice.setVisible(not notice_hidden)
+            if comparison_hidden:
+                self.preview_scroll.hide()
+                self.comparison_toggle.setText(tr('Show comparison'))
+            elif old_position == preferences.comparison_position:
+                self.results_split.setSizes(split_sizes)
+                self.comparison_sized = True
         else:
             self.apply_defaults()
         self.primary_path.setText(paths[0])
@@ -295,6 +319,7 @@ class MainWindow(QMainWindow):
     def _set_busy(self, busy):
         self.settings_action.setEnabled(not busy)
         self.progress.setVisible(busy)
+        self.progress_label.setVisible(busy or self.result is None)
         self.scan_button.setEnabled(not busy)
         self.cancel_button.setEnabled(busy)
         for widget in self.config_widgets:
@@ -314,6 +339,7 @@ class MainWindow(QMainWindow):
         self.clear_selection()
         self.new_scan = True
         self.notice.setText(tr('Scanning. File actions will be available when reading finishes.'))
+        self.notice.show()
         self.progress.setValue(0)
         self.start_job(lambda cancel, progress: scan(options, cancel, progress), self.scan_done)
 
@@ -326,6 +352,7 @@ class MainWindow(QMainWindow):
         self.root_summary.setText(names)
         self.root_summary.setToolTip(str(result.options.primary) + ('\n' + str(result.options.secondary) if result.options.secondary else ''))
         self.root_summary.show()
+        self.scan_details_button.setEnabled(True)
         self.checked_keys.clear()
         self.preferred_keepers.clear()
         if self.new_scan:
@@ -358,6 +385,8 @@ class MainWindow(QMainWindow):
         if result.options.similar:
             text += tr(' Quick scan estimates coverage from samples.') if result.options.video_profile == 'fast' else tr(' Full scan examines the video timeline.')
         self.notice.setText(text)
+        self.notice.setVisible(result.cancelled)
+        self.scan_details_button.setToolTip(text)
         self.notice.setToolTip('\n'.join(result.errors))
         self.progress_label.setText(tr('{p0} files, {p1} exact groups, {p2} similar pairs, {p3} issues', p0=f'{count}', p1=f'{len(result.exact_groups)}', p2=f'{len(result.similar_matches)}', p3=f'{errors}'))
         self.populate()
@@ -378,6 +407,7 @@ class MainWindow(QMainWindow):
             result.similar_matches = matches
             self.scan_done(result)
         self.notice.setText(tr('Applying thresholds to existing fingerprints without decoding the videos again.'))
+        self.notice.show()
         self.start_job(calculate, done)
 
     def cancel_current(self):
@@ -401,6 +431,7 @@ class MainWindow(QMainWindow):
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
         self.notice.setText(message)
+        self.notice.show()
         if not message.startswith(tr('Operation canceled')):
             QMessageBox.warning(self, tr('Could not complete the operation'), message)
         if self.result:
@@ -542,6 +573,7 @@ class MainWindow(QMainWindow):
         if hidden:
             hint += tr(' {p0} selected files are outside the current filter.', p0=f'{hidden}')
         self.selection_hint.setText(hint)
+        self.selection_hint.setVisible(bool(protected or hidden or (count and self.result and not self.result.exact_complete)))
         keepers = {keeper for key, keeper in self.preferred_keepers.items() if key in self.checked_keys and keeper not in self.checked_keys}
         self.table.blockSignals(True)
         for item in [self.table.item(row, 0) for row in range(self.table.rowCount())]:
@@ -596,11 +628,10 @@ class MainWindow(QMainWindow):
         row = self.table.currentRow()
         if row < 0 or not self.result:
             return
-        first_preview = self.preview_scroll.isHidden()
         self.preview_scroll.show()
         self.comparison_toggle.setText(tr('Hide comparison'))
-        if first_preview:
-            QTimer.singleShot(0, lambda: self.results_split.setSizes([max(160,self.results_split.height()-410),410]))
+        if not self.comparison_sized:
+            QTimer.singleShot(0, self.size_comparison)
         key = self.table.item(row, 0).data(Qt.ItemDataRole.UserRole)
         self.current_key = key
         self.peer_combo.blockSignals(True)
@@ -630,6 +661,19 @@ class MainWindow(QMainWindow):
         else:
             self.preview_scroll.hide()
             self.comparison_toggle.setText(tr('Show comparison'))
+
+    def size_comparison(self):
+        if self.comparison_sized or self.preview_scroll.isHidden():
+            return
+        if self.results_split.orientation() == Qt.Orientation.Horizontal:
+            available = self.results_split.width()
+            preview = min(660, max(400, int(available * 0.36)))
+            self.results_split.setSizes([max(460, available - preview), preview])
+        else:
+            available = self.results_split.height()
+            preview = min(330, int(available * 0.45))
+            self.results_split.setSizes([max(160, available - preview), preview])
+        self.comparison_sized = True
 
     def show_peer(self, *_):
         if not self.current_key or not self.result:
@@ -712,8 +756,10 @@ class MainWindow(QMainWindow):
         if remove.key in keys:
             self.preferred_keepers[remove.key] = keep.key
         self.set_checked(keys)
+        self.table.setFocus(Qt.FocusReason.OtherFocusReason)
         if restored:
             self.notice.setText(tr('{count} earlier selections were kept because their reference is now selected for removal. Review them before choosing another reference.', count=len(restored)))
+            self.notice.show()
 
     def load_thumbnails(self, records, times):
         if self.thumb_worker:
@@ -988,6 +1034,7 @@ class MainWindow(QMainWindow):
             else:
                 export_html(self.result, path)
             self.notice.setText(tr('Report saved to {p0}', p0=f'{path}'))
+            self.notice.show()
         except OSError as exc:
             QMessageBox.warning(self, tr('Export report'), str(exc))
 

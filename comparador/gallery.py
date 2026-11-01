@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QPixmap, QShortcut, QKeySequence
-from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, QWidget, QDialog
+from PySide6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, QWidget, QDialog, QSizePolicy
 from .i18n import tr
 from .models import human_size, duration_text
 from .appearance import icon
@@ -29,14 +29,21 @@ class PreviewCard(QFrame):
         self.images = {}
         self.loading = False
         layout = QVBoxLayout(self)
+        layout.setSpacing(4)
         layout.setContentsMargins(12, 10, 12, 10)
+        self.header = QHBoxLayout()
         self.heading = QLabel(heading)
         self.heading.setObjectName("step")
-        layout.addWidget(self.heading)
         self.name = QLabel()
         self.name.setObjectName("section")
-        layout.addWidget(self.name)
+        self.name.setMinimumWidth(0)
+        self.name.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.name.setWordWrap(True)
+        self.header.addWidget(self.name, 1)
+        self.header.addWidget(self.heading)
+        layout.addLayout(self.header)
         self.path = QLabel()
+        self.path.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.path.setWordWrap(True)
         self.path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.path.setMaximumHeight(44)
@@ -84,6 +91,16 @@ class PreviewCard(QFrame):
         self.folder.clicked.connect(self.open_folder)
         self.set_record(None)
 
+    def set_compact(self, compact):
+        self.compact = compact
+        self.name.setWordWrap(not compact)
+        self.scroll.setFixedHeight(94 if compact else 128)
+        self.path.setMaximumHeight(22 if compact else 44)
+        self.decision.setVisible(not compact)
+        self.layout().setContentsMargins(10, 6, 10, 6)
+        for thumb in self.thumbs:
+            thumb.setFixedHeight(60 if compact else 85)
+
     def add_slots(self, count):
         for _ in range(count):
             index = len(self.thumbs)
@@ -94,7 +111,7 @@ class PreviewCard(QFrame):
             thumb = FrameLabel(tr("Loading..."))
             thumb.setObjectName("thumb")
             thumb.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            thumb.setFixedHeight(85)
+            thumb.setFixedHeight(60 if getattr(self, 'compact', False) else 85)
             thumb.setCursor(Qt.CursorShape.PointingHandCursor)
             thumb.activated.connect(lambda i=index: self.frame_requested.emit(i))
             column.addWidget(thumb)
@@ -122,6 +139,12 @@ class PreviewCard(QFrame):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._size_cells()
+        self._elide_labels()
+
+    def _elide_labels(self):
+        if getattr(self, 'compact', False) and self.record:
+            for widget, text in [(self.path, self._path_text), (self.name, self._name_text)]:
+                widget.setText(widget.fontMetrics().elidedText(text, Qt.TextElideMode.ElideMiddle, max(1,widget.width())))
 
     def _scrolled(self, value):
         bar = self.scroll.horizontalScrollBar()
@@ -146,13 +169,17 @@ class PreviewCard(QFrame):
         self.decision.clear()
         self.more.hide()
         if record:
-            self.name.setText(Path(record.path).name)
+            self._name_text = Path(record.path).name
+            self.name.setText(self._name_text)
+            self.name.setToolTip(record.path)
             role = tr("This folder") if getattr(self, "single_folder", False) else tr("Primary") if record.root == "primary" else tr("Secondary")
-            self.path.setText(role + ": " + str(Path(record.path).parent))
+            self._path_text = role + ": " + str(Path(record.path).parent)
+            self.path.setText(self._path_text)
             self.path.setToolTip(record.path)
             data = record.metadata
             self.meta.setText(", ".join([human_size(record.size), duration_text(data.get("duration")),
                 f"{data.get('width',0)} x {data.get('height',0)}" if data else tr("No video metadata")]))
+            self._elide_labels()
         else:
             self.name.setText(tr("No file selected"))
             self.path.clear()

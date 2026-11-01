@@ -35,6 +35,11 @@ class PreferencesDialog(QDialog):
         self.gallery.addItem("24", 24)
         self.gallery.setCurrentIndex(self.gallery.findData(preferences.gallery_frames))
         form.addRow(tr("Frames per gallery"), self.gallery)
+        self.comparison_position = QComboBox()
+        self.comparison_position.addItem(tr('To the right of the table'), 'right')
+        self.comparison_position.addItem(tr('Below the table'), 'below')
+        self.comparison_position.setCurrentIndex(self.comparison_position.findData(preferences.comparison_position))
+        form.addRow(tr('Comparison position'), self.comparison_position)
         scan = QWidget()
         form = QFormLayout(scan)
         scroll = QScrollArea()
@@ -102,4 +107,5 @@ class PreferencesDialog(QDialog):
                        videos_only=self.videos_only.isChecked(), similar=self.similar.isChecked(),
                        video_profile=self.profile.currentData(), similarity=self.similarity.value(),
                        coverage=self.coverage.value(), gallery_frames=self.gallery.currentData(),
+                       comparison_position=self.comparison_position.currentData(),
                        visible_columns=[key for key, check in self.column_checks.items() if check.isChecked()])

@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--selected", action="store_true")
     parser.add_argument("--language", choices=["en","es"], default="es")
     parser.add_argument("--theme", choices=["light","dark","system"], default="light")
+    parser.add_argument('--rows', type=int, default=0, help='Add generated exact copies for a populated result list')
     args = parser.parse_args()
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     os.environ["QT_SCALE_FACTOR"] = args.scale
@@ -44,6 +45,11 @@ def main():
         (b / "Notes.txt").write_text("Secondary-only file", encoding="utf-8")
         (a / "Inventory.txt").write_text("Primary collection", encoding="utf-8")
     app = QApplication([])
+    if args.rows > 0:
+        for index in range(min(args.rows, 100)):
+            target = b / f'Review copy {index + 1:03d}.mp4'
+            if not target.exists():
+                shutil.copy2(original, target)
     window = MainWindow()
     from dataclasses import replace
     window.apply_preferences(replace(window.preferences,language=args.language,theme=args.theme))

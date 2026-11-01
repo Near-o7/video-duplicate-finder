@@ -27,6 +27,9 @@ python -m pytest -q
 - Failed quick seeks recover through bounded FFmpeg sampling on the same timestamp grid. Cancellation does not trigger recovery, and incomplete recovery remains an error.
 - Real MP4 files with embedded covers, unavailable container or stream durations, and cached recovered fingerprints.
 - Direct read failures are distinguished from files whose comparison is incomplete, without classifying uncertain results as absent.
+- Populated result tables retain at least 20 visible rows at 1920 by 1020 and 11 at 1280 by 720 with the side comparison open.
+- Both preview decision buttons return keyboard focus to the table. Arrow navigation preserves checkboxes and keeper choices.
+- Adjustable dividers, alternate comparison placement and active review state survive row and preference changes.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 
@@ -35,6 +38,7 @@ Creating symbolic links may be skipped when the Windows account lacks the requir
 ```powershell
 python tools/verify_ui.py --language en --theme light --selected
 python tools/verify_ui.py --language en --theme dark --selected
+python tools/verify_ui.py --language es --theme dark --size 1920x1020 --rows 30 --selected
 python tools/verify_ui.py --language es --theme light --scale 1.5 --size 1280x720
 python tools/verify_controls.py --scale 1.5
 ```

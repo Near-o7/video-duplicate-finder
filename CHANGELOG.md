@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- Moved comparison previews to an adjustable side panel by default, with the below-table position available in preferences.
+- Compacted preview cards, table rows and surrounding controls while retaining galleries, expanded images and full-path tooltips.
+- Consolidated scan counts and moved explanatory text behind Scan details. Kept actionable warnings visible and hid idle progress text.
+- Returned focus to the table after preview decisions so arrow navigation preserves removal selections and keeper choices.
+- Preserved the active row, matching copy, collapsed panels and divider size when changing preferences.
+
 ## 1.2.2
 
 - Added a bounded alternative FFmpeg sampler when the quick PyAV reader fails, using the same timestamps without switching to a full scan.

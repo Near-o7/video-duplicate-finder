@@ -26,6 +26,7 @@ class Preferences:
     similarity: int = 90
     coverage: int = 80
     gallery_frames: int = 12
+    comparison_position: str = 'right'
     visible_columns: list[str] = field(default_factory=lambda: [key for key, _ in RESULT_COLUMNS])
 
     def validate(self):
@@ -33,6 +34,8 @@ class Preferences:
             raise ValueError("Invalid language or theme")
         if self.video_profile not in ("fast", "full"):
             raise ValueError("Invalid video profile")
+        if self.comparison_position not in ('right', 'below'):
+            raise ValueError('Invalid comparison position')
         if not 70 <= self.similarity <= 99 or not 50 <= self.coverage <= 100 or self.gallery_frames not in (12, 24):
             raise ValueError("Invalid preference value")
         for field in ("two_folders", "recursive", "videos_only", "similar"):

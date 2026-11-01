@@ -293,5 +293,9 @@
   "The alternative video reader exceeded its time limit.": "El lector alternativo superó el tiempo máximo permitido.",
   "Video read error": "Error al leer el video",
   "Comparison incomplete": "Comparación incompleta",
+  "Scan details": "Detalles del análisis",
+  "Comparison position": "Posición de la comparación",
+  "To the right of the table": "A la derecha de la tabla",
+  "Below the table": "Debajo de la tabla",
   "This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.": "Este archivo se leyó, pero otros errores impiden completar la comparación. Revisa Incidencias. No se confirma que falte una copia."
 }

@@ -41,6 +41,10 @@ The first three gallery frames give an overview. Scroll horizontally or choose *
 
 Use **Hide comparison** and **Show comparison** beside the selection controls to collapse or restore the preview. The **Matches with** column names each file's matching copy. Exact groups use a shared G identifier, and visual pairs use a shared V identifier. Hover over the cell to see all matching paths and use the comparison selector to review additional matches. Visual pairs are direct matches, not groups of interchangeable files.
 
+The comparison appears to the right of the table by default, with both copies stacked vertically. Drag the divider to adjust the space. This keeps the full table height available for browsing. Choose **Settings > Preferences > General > Comparison position** to place the comparison below the table instead. Compact previews retain additional frames, expanded images and full paths in tooltips. Narrow windows use scrolling to keep all columns and comparison controls accessible.
+
+After choosing **Keep this copy** or **Select for removal**, keyboard focus returns to the table. Use the Up and Down arrows to continue reviewing while keeping all removal checkboxes and keeper choices. The header shows the folder and scan counts once. **Scan details** opens the explanatory text, and progress is visible while work is running. Protected-file and hidden-selection warnings remain visible when relevant.
+
 Choosing a copy to keep clears its removal selection. If you later mark that reference for removal, earlier files that depended on it are kept and an explanatory notice appears. A previously reviewed visual keeper goes straight to the final confirmation. If all direct matches are selected for removal, the warning names the file and the matching paths that need a keeper.
 
 Open **Settings > Preferences** to configure language, appearance, scan defaults, gallery size and visible result columns. The **Result columns** tab lets you hide optional columns or restore all of them. File names and removal selection remain visible. Changes apply to existing results after saving and are remembered on the next launch. Theme and language changes preserve the active comparison. Primary-folder unlocking is never stored as a default.
@@ -62,7 +66,7 @@ Similarity is a fingerprint score, not a probability that two files are intercha
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.2.2/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.0/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 
