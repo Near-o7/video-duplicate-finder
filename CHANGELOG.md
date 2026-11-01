@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.5
+
+- Added an optional edited-video segment profile that aligns ordered shared runs independently across internal cuts and inserted scenes. It reuses full-profile fingerprints and allows 10% to 100% coverage of the longer video without counting samples twice.
+- Added English and Spanish profile controls, saved defaults, matched ranges in existing previews and reports, and sampling guards when applying a different profile.
+- Labeled segment candidates as shared video sections. Automatic extra-copy proposals remain limited to exact copies in this profile because other video content may differ.
+
 ## 1.3.4
 
 - Lowered minimum visual similarity from 70% to 50% in scan options, saved preferences and engine validation, using shared limits.

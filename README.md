@@ -6,6 +6,7 @@ A local Windows desktop application for finding exact duplicate files and visual
 
 - Confirm exact duplicates with full-file SHA-256 hashes, regardless of file names.
 - Find possible video duplicates using a quick sample scan or a more sensitive full scan.
+- Find shared sequences in edited videos with an optional segment profile that tolerates internal cuts.
 - Review matches side by side and choose which copy to keep directly below each preview.
 - See matching file names and shared pair identifiers in the result list, with visible keep and removal choices.
 - Select extra copies in bulk while preserving references, or select every visible file.
@@ -65,7 +66,11 @@ FLV inputs are identified by their file signature, including files renamed with 
 
 Similarity is a fingerprint score, not a probability that two files are interchangeable. Strong crops, watermarks, speed changes and extensive edits may not match. Lowering a threshold reuses existing fingerprints without decoding again. Quick and full fingerprints are cached separately.
 
-Minimum visual similarity is adjustable from 50% to 99% in both scan options and preferences. The default remains 90%. Lower values produce more candidates for manual review. Minimum coverage is a separate control and keeps its existing range.
+Choose **Exact copies and similar videos > Edited videos by segments** for versions with internal cuts or inserted scenes. This profile uses full sampling and independently aligns shared sequences while preserving their order. Coverage is the total matched duration divided by the longer video's duration, without counting the same samples twice. It can be adjusted from 10% to 100% in this profile. The default remains 80%, so lower coverage if only sections are shared. For example, 3 shared minutes in a 10-minute video need coverage of 30% or less. Lower visual similarity can help with mild effects, but large overlays, reframing, speed changes and reordered scenes remain limitations. Candidates always require manual review.
+
+The first segment scan decodes the timeline and may take longer than quick sampling. It shares the existing full-profile fingerprint cache. **Apply** can switch between full and segment matching or adjust thresholds without decoding again. Switching from quick sampling requires a new scan. Uniform images, repeated stills and isolated matching captures do not establish a matching sequence. Each accepted run needs at least three changing captures, a minimum duration and enough cumulative visual evidence. Weaker similarities need longer sequences to reduce accidental matches. Very brief scenes and subsecond cuts in rapidly changing content may be missed at the one-second sampling interval. Reports and comparison previews include the matched time ranges. Results are labeled **Shared video sections** because other parts can differ. In this profile, **Select extra copies** only proposes exact duplicates. Segment candidates require individual review and explicit selection.
+
+Minimum visual similarity is adjustable from 50% to 99% in both scan options and preferences. The default remains 90%. Lower values produce more candidates for manual review. Minimum coverage is a separate control, from 50% to 100% for quick and full matching, or 10% to 100% for segment matching.
 
 ## Build a portable executable
 
@@ -74,7 +79,7 @@ Minimum visual similarity is adjustable from 50% to 99% in both scan options and
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.4/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.5/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 
