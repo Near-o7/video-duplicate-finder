@@ -70,6 +70,10 @@ Choose **Exact copies and similar videos > Edited videos by segments** for versi
 
 The first segment scan decodes the timeline and may take longer than quick sampling. It shares the existing full-profile fingerprint cache. **Apply** can switch between full and segment matching or adjust thresholds without decoding again. Switching from quick sampling requires a new scan. Uniform images, repeated stills and isolated matching captures do not establish a matching sequence. Each accepted run needs at least three changing captures, a minimum duration and enough cumulative visual evidence. Weaker similarities need longer sequences to reduce accidental matches. Very brief scenes and subsecond cuts in rapidly changing content may be missed at the one-second sampling interval. Reports and comparison previews include the matched time ranges. Results are labeled **Shared video sections** because other parts can differ. In this profile, **Select extra copies** only proposes exact duplicates. Segment candidates require individual review and explicit selection.
 
+For a faster first pass, choose **Edited videos by segments, quick**. It seeks to at most 160 captures across each video instead of decoding the entire timeline, and bounds the segment comparison grid to the same size. Coverage and matching ranges are estimates. Short sections, cuts between samples and offsets that do not align with the coarser grid can be missed, especially in fast-moving content. Runs require at least three changing captures. A 28-minute video uses a 16-second sampling interval, so a run needs at least 48 seconds of sampled evidence. Use the full segment profile when a quick scan misses expected matches. This is a speed and sensitivity tradeoff, not an equivalent replacement for full analysis.
+
+Quick segment fingerprints have their own cache and can also be derived from existing full fingerprints without decoding. Threshold changes and **Apply** reuse the loaded fingerprints. Applying quick segment matching to dense results also needs no decoding. Moving back to a denser profile requires a new scan, which reuses its cache if present. Decoder recovery shares a 60-second budget and never silently switches to full decoding. Both segment profiles use manual review for visual candidates and allow coverage from 10% to 100%.
+
 Minimum visual similarity is adjustable from 50% to 99% in both scan options and preferences. The default remains 90%. Lower values produce more candidates for manual review. Minimum coverage is a separate control, from 50% to 100% for quick and full matching, or 10% to 100% for segment matching.
 
 ## Build a portable executable
@@ -79,7 +83,7 @@ Minimum visual similarity is adjustable from 50% to 99% in both scan options and
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.5/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.6/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 

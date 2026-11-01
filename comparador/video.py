@@ -114,6 +114,42 @@ def fast_fingerprint(path, metadata, cancel, progress=None):
             raise ValueError(tr('Quick decoding failed with both readers. First reader: {first}. Alternative reader: {second}', first=str(primary_error), second=str(fallback_error))) from fallback_error
 
 
+def segment_sample_grid(metadata):
+    """A bounded power-of-two grid, aligned with dense fingerprint bins."""
+    duration = metadata['duration']
+    step = 0.25 if duration < 3 else float(2 ** max(0, math.ceil(math.log2(duration / 160))))
+    # Dense fps sampling selects the middle of each one-second bin.
+    phase = min(0.5 if duration >= 3 else 0.125, duration / 2)
+    targets = list(np.arange(phase, max(phase + 0.001, duration - 0.1), step))[:160]
+    return step, targets
+
+
+def fast_segment_fingerprint(path, metadata, cancel, progress=None):
+    """Read at most 160 frames by seeking, with a shared recovery deadline."""
+    import av
+    grid = segment_sample_grid(metadata)
+    deadline = time.monotonic() + 60
+    try:
+        result = _fast_pyav(path, metadata, cancel, progress, grid=grid, deadline=deadline)
+    except (av.FFmpegError, OSError, ValueError, EOFError, RuntimeError) as primary_error:
+        cancel_check(cancel)
+        try:
+            result = _fast_ffmpeg(path, metadata, cancel, progress, grid=grid, deadline=deadline)
+        except (OSError, ValueError, RuntimeError, EOFError) as fallback_error:
+            raise ValueError(tr('Quick decoding failed with both readers. First reader: {first}. Alternative reader: {second}', first=str(primary_error), second=str(fallback_error))) from fallback_error
+    result['profile'] = 'segments_fast'
+    result['estimated'] = True
+    return result
+
+
+def sparse_segment_fingerprint(dense, metadata):
+    """Reuse existing dense hashes without decoding or replacing the dense cache."""
+    step, _ = segment_sample_grid(metadata)
+    stride = max(1, round(step / dense['step']))
+    return {'step': dense['step'] * stride, 'hashes': dense['hashes'][::stride][:160],
+            'profile': 'segments_fast', 'estimated': True}
+
+
 def _sample_grid(metadata):
     duration = metadata['duration']
     step = 0.25 if duration < 3 else float(2 ** max(0, math.ceil(math.log2(duration / 24))))
@@ -121,11 +157,11 @@ def _sample_grid(metadata):
     return step, list(np.arange(phase, max(phase + 0.001, duration - 0.1), step))[:24]
 
 
-def _fast_ffmpeg(path, metadata, cancel, progress=None):
+def _fast_ffmpeg(path, metadata, cancel, progress=None, *, grid=None, deadline=None):
     """Alternative sparse reader, bounded to 45 seconds per video, never a full scan."""
-    step, targets = _sample_grid(metadata)
+    step, targets = grid if grid is not None else _sample_grid(metadata)
     hashes = []
-    deadline = time.monotonic() + 45
+    deadline = min(deadline, time.monotonic() + 45) if deadline is not None else time.monotonic() + 45
     for i, target in enumerate(targets):
         cancel_check(cancel)
         remaining = deadline - time.monotonic()
@@ -142,14 +178,14 @@ def _fast_ffmpeg(path, metadata, cancel, progress=None):
     return {'step': step, 'hashes': hashes, 'profile': 'fast', 'estimated': True, 'reader': 'ffmpeg'}
 
 
-def _fast_pyav(path, metadata, cancel, progress=None):
-    """Seek to at most 24 targets, reusing a single indexed decoder.
+def _fast_pyav(path, metadata, cancel, progress=None, *, grid=None, deadline=None):
+    """Seek to a bounded grid, reusing a single indexed decoder.
 
     Power-of-two intervals retain a common time grid after modest trims.
     Coverage from these sparse samples is explicitly an estimate.
     """
     import av
-    step, targets = _sample_grid(metadata)
+    step, targets = grid if grid is not None else _sample_grid(metadata)
     hashes = []
     options = {'flv_ignore_prevtag': '1'} if media_input_options(path) else {}
     with av.open(str(path), timeout=(10, 10), options=options) as container:
@@ -159,12 +195,16 @@ def _fast_pyav(path, metadata, cancel, progress=None):
         origin = stream.start_time or 0
         for i, target in enumerate(targets):
             cancel_check(cancel)
+            if deadline is not None and time.monotonic() >= deadline:
+                raise ValueError(tr('The alternative video reader exceeded its time limit.'))
             if progress:
                 progress(i + 1, len(targets))
             container.seek(origin + int(float(target) / float(stream.time_base)), stream=stream, backward=True, any_frame=False)
             chosen = None
             for frame in container.decode(stream):
                 cancel_check(cancel)
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise ValueError(tr('The alternative video reader exceeded its time limit.'))
                 if frame.pts is None:
                     continue
                 timestamp = float((frame.pts - origin) * stream.time_base)
@@ -255,13 +295,20 @@ def compare_pair(a, b, similarity, coverage, cancel):
     return best
 
 def find_similar(records, similarity, coverage, cancel, progress=None, mode='full'):
-    if mode not in ('fast', 'full', 'segments'):
+    if mode not in ('fast', 'full', 'segments', 'segments_fast'):
         raise ValueError(tr('Unknown video profile.'))
     if mode == 'segments':
         from .segments import compare_segments
         compare = compare_segments
+    elif mode == 'segments_fast':
+        from .segments import compare_fast_segments
+        compare = compare_fast_segments
     else:
         compare = compare_pair
+    if mode == 'segments_fast':
+        from dataclasses import replace
+        records = [replace(f, fingerprint=sparse_segment_fingerprint(f.fingerprint, f.metadata))
+                   if f.fingerprint and not f.fingerprint.get('estimated') else f for f in records]
     eligible = [f for f in records if f.active and f.fingerprint and (not f.error) and (not f.video_error)]
     eligible.sort(key=lambda f: f.metadata['duration'])
     durations = [f.metadata['duration'] for f in eligible]

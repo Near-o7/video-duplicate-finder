@@ -6,7 +6,7 @@ import threading
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from comparador.video import binary, run_media, probe, fingerprint, fast_fingerprint
+from comparador.video import binary, run_media, probe, fingerprint, fast_fingerprint, fast_segment_fingerprint
 
 
 def main():
@@ -24,12 +24,13 @@ def main():
     metadata = probe(video, cancel)
     data = {"duration_seconds": metadata["duration"], "width": metadata["width"], "height": metadata["height"],
             "source": "generated testsrc2 loop, H.264, 30 fps, GOP 60; not the user's video"}
-    for name, fn in (("fast", fast_fingerprint), ("full", fingerprint)):
+    for name, fn in (("fast", fast_fingerprint), ("segments_fast", fast_segment_fingerprint), ("full", fingerprint)):
         start = time.perf_counter()
         fp = fn(video, metadata, cancel)
         data[name] = {"seconds": round(time.perf_counter() - start, 3), "samples": len(fp["hashes"])}
         print(name, data[name], flush=True)
     data["speedup"] = round(data["full"]["seconds"] / data["fast"]["seconds"], 1)
+    data["segment_extraction_speedup"] = round(data["full"]["seconds"] / data["segments_fast"]["seconds"], 1)
     (root.parent / "video-benchmark.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
     print(json.dumps(data, indent=2))
 

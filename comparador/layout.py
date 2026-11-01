@@ -84,6 +84,7 @@ def build_window(w):
     w.video_profile = QComboBox()
     w.video_profile.addItem(tr('Quick scan with up to 24 samples'), 'fast')
     w.video_profile.addItem(tr('Full scan of the entire video'), 'full')
+    w.video_profile.addItem(tr('Edited videos by segments, quick'), 'segments_fast')
     w.video_profile.addItem(tr('Edited videos by segments'), 'segments')
     w.video_profile.setToolTip(tr('Quick scan uses direct seeking and may miss edits or trims. Full scan examines more frames.'))
     analysis.addWidget(w.video_profile)
@@ -119,7 +120,11 @@ def build_window(w):
     w.profile_note = label(tr('Finds shared sequences despite internal cuts. Uses full sampling. Coverage refers to the longer video and can be lowered to 10%. Effects may reduce visual similarity. The first scan takes longer, then cached frames are reused.'), 'muted', True)
     config.addWidget(w.profile_note)
     def profile_changed():
-        segments = w.video_profile.currentData() == 'segments'
+        segments = w.video_profile.currentData() in ('segments', 'segments_fast')
+        if w.video_profile.currentData() == 'segments_fast':
+            w.profile_note.setText(tr('Seeks to up to 160 captures without reading the entire timeline. Coverage and ranges are estimated. Brief sections and cuts between samples may be missed. Use the full segment profile for closer review.'))
+        else:
+            w.profile_note.setText(tr('Finds shared sequences despite internal cuts. Uses full sampling. Coverage refers to the longer video and can be lowered to 10%. Effects may reduce visual similarity. The first scan takes longer, then cached frames are reused.'))
         w.coverage.setMinimum(10 if segments else 50)
         w.profile_note.setVisible(bool(w.analysis_mode.currentIndex()) and segments)
     w.video_profile.currentIndexChanged.connect(profile_changed)

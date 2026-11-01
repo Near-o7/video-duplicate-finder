@@ -62,6 +62,7 @@ class PreferencesDialog(QDialog):
         self.profile = QComboBox()
         self.profile.addItem(tr("Quick scan"), "fast")
         self.profile.addItem(tr("Full scan"), "full")
+        self.profile.addItem(tr('Edited videos by segments, quick'), 'segments_fast')
         self.profile.addItem(tr('Edited videos by segments'), 'segments')
         self.profile.setCurrentIndex(self.profile.findData(preferences.video_profile))
         form.addRow(tr("Default video profile"), self.profile)
@@ -71,7 +72,7 @@ class PreferencesDialog(QDialog):
         self.similarity.setValue(preferences.similarity)
         form.addRow(tr("Minimum visual similarity"), self.similarity)
         self.coverage = QSpinBox()
-        self.coverage.setRange(10 if preferences.video_profile == 'segments' else 50, 100)
+        self.coverage.setRange(10 if preferences.video_profile in ('segments', 'segments_fast') else 50, 100)
         self.coverage.setSuffix(" %")
         self.coverage.setValue(preferences.coverage)
         form.addRow(tr("Minimum content coverage"), self.coverage)
@@ -79,7 +80,11 @@ class PreferencesDialog(QDialog):
         self.profile_note.setWordWrap(True)
         form.addRow(self.profile_note)
         def profile_changed():
-            segments = self.profile.currentData() == 'segments'
+            segments = self.profile.currentData() in ('segments', 'segments_fast')
+            if self.profile.currentData() == 'segments_fast':
+                self.profile_note.setText(tr('Seeks to up to 160 captures without reading the entire timeline. Coverage and ranges are estimated. Brief sections and cuts between samples may be missed. Use the full segment profile for closer review.'))
+            else:
+                self.profile_note.setText(tr('Finds shared sequences despite internal cuts. Uses full sampling. Coverage refers to the longer video and can be lowered to 10%. Effects may reduce visual similarity. The first scan takes longer, then cached frames are reused.'))
             self.coverage.setMinimum(10 if segments else 50)
             self.profile_note.setVisible(segments)
         self.profile.currentIndexChanged.connect(profile_changed)

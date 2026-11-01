@@ -92,8 +92,24 @@ def run_selftest(report_path):
                 time.sleep(0.02)
             assert not window.jobs
             window.close()
+            # Exercise the new sampler and ordered matcher inside the frozen
+            # executable, not merely through the source installation.
+            segment_root = root / 'Segment fixtures'
+            segment_root.mkdir()
+            source = segment_root / 'source.mp4'
+            run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-y', '-f', 'lavfi', '-i',
+                       'testsrc2=size=320x180:rate=12:duration=24', '-c:v', 'libx264', str(source)], cancel)
+            run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-y', '-i', str(source), '-vf',
+                       "select='lt(t,6)+gte(t,8)*lt(t,14)+gte(t,16)',setpts=N/FRAME_RATE/TB",
+                       '-an', '-c:v', 'libx264', '-crf', '27', str(segment_root / 'edited.mp4')], cancel)
+            segments = scan(ScanOptions(segment_root, similar=True, video_profile='segments_fast',
+                                        similarity=85, coverage=60), cache_path=root / 'segments.db')
+            assert segments.video_complete and len(segments.similar_matches) == 1
+            segment_match = segments.similar_matches[0]
+            assert segment_match.estimated and len(segment_match.spans) >= 2
             report.update(ok=True, ffmpeg=binary("ffmpeg"), ffprobe=binary("ffprobe"),
-                          exact_groups=len(result.exact_groups), visual_pairs=len(result.similar_matches), gui_rows=4, recycle_bin=True)
+                          exact_groups=len(result.exact_groups), visual_pairs=len(result.similar_matches), gui_rows=4, recycle_bin=True,
+                          quick_segment_pairs=len(segments.similar_matches), quick_segment_runs=len(segment_match.spans))
     except Exception:
         report["error"] = traceback.format_exc()
     finally:

@@ -16,7 +16,10 @@ def report_rows(result):
         for peer, match in visual:
             spans = match.spans if match.a == key else [[s[2],s[3],s[0],s[1]] for s in match.spans]
             segments = ". ".join(f"{duration_text(s[0])} to {duration_text(s[1])} / {duration_text(s[2])} to {duration_text(s[3])}" for s in spans)
-            details.append(peer.path + "\n" + tr("Visual {similarity}%, coverage {coverage}%. {segments}", similarity=f"{match.similarity:.1f}", coverage=f"{match.coverage:.1f}", segments=segments))
+            detail = tr("Visual {similarity}%, coverage {coverage}%. {segments}", similarity=f"{match.similarity:.1f}", coverage=f"{match.coverage:.1f}", segments=segments)
+            if match.estimated:
+                detail += ' ' + tr('Coverage and ranges estimated from samples.')
+            details.append(peer.path + "\n" + detail)
         yield [record.path, tr("Primary") if record.root == "primary" else tr("Secondary"), tr(result.display_status(key)), record.size,
                duration_text(record.metadata.get("duration")), f"{record.metadata.get('width',0)} x {record.metadata.get('height',0)}" if record.metadata else "",
                record.digest, "\n".join(p.path for p in result.exact_peers(key)), "\n".join(p.path for p,_ in visual), "\n".join(details),
@@ -34,8 +37,10 @@ def export_csv(result, path):
         writer.writerow(["Video Duplicate Finder", datetime.datetime.fromtimestamp(result.created).isoformat(timespec="seconds")])
         writer.writerow([tr("Primary"),str(result.options.primary),tr("Secondary"),str(result.options.secondary or "")])
         writer.writerow([tr("Profile"),result.options.video_profile,tr("Minimum visual similarity"),result.options.similarity,tr("Minimum content coverage"),result.options.coverage])
-        if result.options.video_profile == 'segments':
+        if result.options.video_profile in ('segments', 'segments_fast'):
             writer.writerow([tr('Segment matching allows internal cuts and counts shared content against the longer video.')])
+        if result.options.video_profile == 'segments_fast':
+            writer.writerow([tr('Quick segment coverage and ranges are estimated from at most 160 captures. Unmatched sections may be missed.')])
         writer.writerow([tr("Complete scan"),result.exact_complete and (not result.options.similar or result.video_complete),tr("Canceled"),result.cancelled])
         for error in result.errors:
             writer.writerow([tr("Error"),csv_safe(error)])
@@ -53,6 +58,7 @@ def export_html(result,path):
 <p>{esc(tr('Profile'))}: {esc(result.options.video_profile)}. {esc(tr('Minimum visual similarity'))}: {result.options.similarity}%. {esc(tr('Minimum content coverage'))}: {result.options.coverage}%.</p>
 <p>{esc(tr('Canceled'))}: {result.cancelled}. {esc(tr('Complete scan'))}: {result.exact_complete and (not result.options.similar or result.video_complete)}.</p>
 <p>{esc(tr('Coverage is estimated from samples in quick mode. Audio is not compared.'))}</p>
-<p>{esc(tr('Segment matching allows internal cuts and counts shared content against the longer video.')) if result.options.video_profile == 'segments' else ''}</p><ul>{errors}</ul>
+<p>{esc(tr('Segment matching allows internal cuts and counts shared content against the longer video.')) if result.options.video_profile in ('segments', 'segments_fast') else ''}</p>
+<p>{esc(tr('Quick segment coverage and ranges are estimated from at most 160 captures. Unmatched sections may be missed.')) if result.options.video_profile == 'segments_fast' else ''}</p><ul>{errors}</ul>
 <table><thead><tr>{''.join(f'<th>{esc(tr(h))}</th>' for h in HEADERS)}</tr></thead><tbody>{rows}</tbody></table></html>'''
     Path(path).write_text(text,encoding="utf-8")
