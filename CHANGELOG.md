@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.3
+
+- Scoped secondary no-match classification to primary reference files so failures in unrelated secondary videos no longer mark readable secondary comparisons as incomplete.
+- Tracked completion of comparison work separately from aggregate file errors. Excluded irrelevant failed non-video references by recorded size while preserving uncertainty for possible exact matches and failed primary videos.
+- Added report notes explaining completed reference comparisons when other files have issues. Kept existing file-action safeguards unchanged.
+
 ## 1.3.2
 
 - Added signature-based FLV reading that tolerates inconsistent previous-tag sizes, including files with renamed extensions, across metadata, quick/full analysis and previews.

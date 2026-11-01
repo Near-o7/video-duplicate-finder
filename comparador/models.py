@@ -92,6 +92,7 @@ class ScanResult:
     cancelled: bool = False
     exact_complete: bool = False
     video_complete: bool = False
+    comparison_finished: bool = False
     created: float = field(default_factory=time.time)
 
     def exact_peers(self, key):
@@ -118,9 +119,35 @@ class ScanResult:
             return 'Exact copy'
         if visual:
             return 'Possible duplicate'
-        if not self.exact_complete or (self.options.similar and f.is_video and (not self.video_complete or f.video_error)):
+        if not self.comparison_complete_for(key):
             return 'Error or pending'
         return 'No matches detected'
+
+    def comparison_complete_for(self, key):
+        """A secondary file needs readable primary references, not other secondary files."""
+        record = self.files[key]
+        if self.cancelled or record.error or not record.active:
+            return False
+        if self.exact_complete:
+            if not self.options.similar or not record.is_video:
+                return True
+            if self.video_complete and not record.video_error and record.fingerprint:
+                return True
+        references = [r for k, r in self.files.items() if k != key and r.active and
+                      (not self.options.secondary or record.root != 'secondary' or r.root == 'primary')]
+        if not self.exact_complete:
+            if not self.comparison_finished or self.errors:
+                return False
+            # Extensions never establish exact equality. Even an unreadable image
+            # remains an uncertain exact reference when its recorded size matches.
+            if any(r.error and r.size == record.size for r in references):
+                return False
+        if self.options.similar and record.is_video:
+            if record.video_error or not record.fingerprint or not (self.video_complete or self.comparison_finished):
+                return False
+            if not self.video_complete and any(r.is_video and (r.error or r.video_error or not r.fingerprint) for r in references):
+                return False
+        return True
 
     def display_status(self, key):
         record = self.files[key]
@@ -136,6 +163,8 @@ class ScanResult:
     def comparison_note(self, key):
         if self.display_status(key) == 'No matches (partial comparison)':
             return tr('This video was analyzed and compared with the readable videos. Some videos could not be read and were excluded. This does not confirm absence from the whole collection.')
+        if self.display_status(key) == 'No matches detected' and (not self.exact_complete or (self.options.similar and not self.video_complete)):
+            return tr('Comparison with the relevant reference files finished without matches. Issues in other files are listed separately.')
         return ''
 
 def human_size(value):

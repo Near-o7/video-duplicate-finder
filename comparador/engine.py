@@ -144,6 +144,7 @@ def scan(options: ScanOptions, cancel=None, progress=None, cache_path=None):
         result.exact_groups = [g for g in result.exact_groups if len(g) > 1]
         result.similar_matches = [m for m in result.similar_matches if not result.files[m.a].error and (not result.files[m.b].error)]
         cancel_check(cancel)
+        result.comparison_finished = True
     except Cancelled:
         result.cancelled = True
         result.exact_complete = False
