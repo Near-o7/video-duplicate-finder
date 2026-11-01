@@ -24,6 +24,9 @@ python -m pytest -q
 - Visual keeper selection reaches the final removal confirmation, overlapping pairs retain valid references, and invalid selections identify affected paths.
 - Matching file names and pair identifiers in the result list, full-width decision buttons and a persistent comparison toggle.
 - Saved result-column visibility, required columns, restoring all columns, and applying settings without losing reviewed keepers.
+- Failed quick seeks recover through bounded FFmpeg sampling on the same timestamp grid. Cancellation does not trigger recovery, and incomplete recovery remains an error.
+- Real MP4 files with embedded covers, unavailable container or stream durations, and cached recovered fingerprints.
+- Direct read failures are distinguished from files whose comparison is incomplete, without classifying uncertain results as absent.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 

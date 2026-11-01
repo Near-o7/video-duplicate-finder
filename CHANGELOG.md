@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2
+
+- Added a bounded alternative FFmpeg sampler when the quick PyAV reader fails, using the same timestamps without switching to a full scan.
+- Selected the actual video track consistently and excluded embedded cover images from samples and previews.
+- Accepted valid stream durations when container durations are unavailable and used video duration instead of a longer audio track.
+- Distinguished direct video read errors from comparisons left incomplete by other failed files, including in exported reports.
+- Refreshed video metadata and fingerprint caches while retaining exact-file hashes.
+
 ## 1.2.1
 
 - Added persisted result-column visibility controls in a dedicated settings tab, with file names and removal selection always visible.

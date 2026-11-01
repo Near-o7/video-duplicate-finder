@@ -40,6 +40,10 @@ def run_selftest(report_path):
             assert result.exact_complete and result.video_complete
             assert len(result.exact_groups) == 1
             assert result.similar_matches
+            from .video import _fast_ffmpeg
+            original_record = next(f for f in result.files.values() if Path(f.path).name == 'original.mp4')
+            recovered = _fast_ffmpeg(original_record.path, original_record.metadata, cancel)
+            assert recovered['reader'] == 'ffmpeg' and len(recovered['hashes']) >= 3
             assert thumbnail(a / "original.mp4", 2, cancel).startswith(b"\xff\xd8")
             trash_fixture = root / "prueba-papelera-comparador.txt"
             trash_fixture.write_text("Archivo temporal generado para verificar la Papelera.", encoding="utf-8")

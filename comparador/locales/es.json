@@ -288,5 +288,10 @@
   "Result columns": "Columnas de resultados",
   "Choose which columns appear in the result list. File and removal selection always remain visible.": "Elige qué columnas aparecen en la lista de resultados. El archivo y la selección para retirar se mantienen siempre visibles.",
   "Show all columns": "Mostrar todas las columnas",
-  "{count} additional matches. Select this row to review all matching copies.": "Hay {count} coincidencias más. Selecciona esta fila para revisar todas las copias coincidentes."
+  "{count} additional matches. Select this row to review all matching copies.": "Hay {count} coincidencias más. Selecciona esta fila para revisar todas las copias coincidentes.",
+  "Quick decoding failed with both readers. First reader: {first}. Alternative reader: {second}": "No se pudo leer el video con ninguno de los dos lectores. Primer lector: {first}. Lector alternativo: {second}",
+  "The alternative video reader exceeded its time limit.": "El lector alternativo superó el tiempo máximo permitido.",
+  "Video read error": "Error al leer el video",
+  "Comparison incomplete": "Comparación incompleta",
+  "This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.": "Este archivo se leyó, pero otros errores impiden completar la comparación. Revisa Incidencias. No se confirma que falte una copia."
 }

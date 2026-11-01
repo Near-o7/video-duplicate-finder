@@ -472,13 +472,15 @@ class MainWindow(QMainWindow):
             if relation_count > len(relations):
                 match_tooltip += '\n\n' + tr('{count} additional matches. Select this row to review all matching copies.', count=relation_count - len(relations))
             resolution = f"{f.metadata.get('width', 0)} × {f.metadata.get('height', 0)}" if f.metadata else 'N/A'
-            display_status = {'No matches detected': tr('No matches'), 'Error or pending': tr('Error or pending')}.get(classification, classification)
+            status = result.display_status(key)
+            display_status = {'No matches detected': tr('No matches'), 'Error or pending': tr('Error or pending')}.get(status, status)
             values = [name, match_text, self.file_location(f), human_size(f.size), duration_text(f.metadata.get('duration')), resolution, display_status, f'{best.similarity:.0f}% / {best.coverage:.0f}%' if best else 'N/A']
             sorts = [name.casefold(), match_text.casefold(), f.root, f.size, f.metadata.get('duration', 0), f.metadata.get('width', 0) * f.metadata.get('height', 0), classification, best.similarity if best else 0]
             for col, (text, sort) in enumerate(zip(values, sorts), 1):
                 item = SortItem(text)
                 item.setData(Qt.ItemDataRole.UserRole + 1, sort)
-                item.setToolTip(match_tooltip if col == 2 and relations else f.path + '\n' + tr(classification) + ('\n' + (f.error or f.video_error) if f.error or f.video_error else ''))
+                detail = f.error or f.video_error or (tr('This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.') if status == 'Comparison incomplete' else '')
+                item.setToolTip(match_tooltip if col == 2 and relations else f.path + '\n' + tr(status) + ('\n' + detail if detail else ''))
                 if col == 7:
                     item.setText(tr(text))
                     item.setForeground(status_color(classification))
@@ -647,7 +649,7 @@ class MainWindow(QMainWindow):
             span = max(spans, key=lambda s: s[1] - s[0], default=[0,f.metadata.get('duration',0),0,peer.metadata.get('duration',0)])
             times = [[span[0] + (span[1] - span[0]) * q for q in (0.15, 0.5, 0.85)], [span[2] + (span[3] - span[2]) * q for q in (0.15, 0.5, 0.85)]]
         else:
-            self.evidence.setText(tr('Identical copy confirmed with a full SHA-256 hash.') if peer else f.error or f.video_error or tr(self.result.classification(f.key)))
+            self.evidence.setText(tr('Identical copy confirmed with a full SHA-256 hash.') if peer else f.error or f.video_error or (tr('This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.') if self.result.display_status(f.key) == 'Comparison incomplete' else tr(self.result.display_status(f.key))))
             times = [[record.metadata.get('duration', 0) * q for q in (0.15, 0.5, 0.85)] if record else [] for record in (f, peer)]
         self.load_thumbnails([f, peer], times)
         self.update_preview_decisions()

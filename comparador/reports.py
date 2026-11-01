@@ -17,7 +17,7 @@ def report_rows(result):
             spans = match.spans if match.a == key else [[s[2],s[3],s[0],s[1]] for s in match.spans]
             segments = ". ".join(f"{duration_text(s[0])} to {duration_text(s[1])} / {duration_text(s[2])} to {duration_text(s[3])}" for s in spans)
             details.append(peer.path + "\n" + tr("Visual {similarity}%, coverage {coverage}%. {segments}", similarity=f"{match.similarity:.1f}", coverage=f"{match.coverage:.1f}", segments=segments))
-        yield [record.path, tr("Primary") if record.root == "primary" else tr("Secondary"), tr(result.classification(key)), record.size,
+        yield [record.path, tr("Primary") if record.root == "primary" else tr("Secondary"), tr(result.display_status(key)), record.size,
                duration_text(record.metadata.get("duration")), f"{record.metadata.get('width',0)} x {record.metadata.get('height',0)}" if record.metadata else "",
                record.digest, "\n".join(p.path for p in result.exact_peers(key)), "\n".join(p.path for p,_ in visual), "\n".join(details),
                "\n".join(x for x in (record.error, record.video_error) if x)]

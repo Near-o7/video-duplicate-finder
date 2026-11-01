@@ -57,10 +57,18 @@ def probe(path, cancel):
     if not streams:
         raise ValueError(tr('The file has no readable video stream.'))
     s = streams[0]
-    duration = float(data.get('format', {}).get('duration') or s.get('duration') or 0)
-    if not math.isfinite(duration) or duration <= 0:
+    duration = 0
+    for value in (s.get('duration'), data.get('format', {}).get('duration')):
+        try:
+            candidate = float(value)
+        except (ValueError, TypeError):
+            continue
+        if math.isfinite(candidate) and candidate > 0:
+            duration = candidate
+            break
+    if duration <= 0:
         raise ValueError(tr('Could not determine the video duration.'))
-    return {'duration': duration, 'width': s.get('width', 0), 'height': s.get('height', 0), 'codec': s.get('codec_name', ''), 'audio': any((x.get('codec_type') == 'audio' for x in data.get('streams', [])))}
+    return {'duration': duration, 'video_stream_index': s['index'], 'width': s.get('width', 0), 'height': s.get('height', 0), 'codec': s.get('codec_name', ''), 'audio': any((x.get('codec_type') == 'audio' for x in data.get('streams', [])))}
 _dct = np.cos(np.pi * (2 * np.arange(32) + 1)[None, :] * np.arange(8)[:, None] / 64)
 
 def perceptual_hash(frame):
@@ -75,7 +83,7 @@ def perceptual_hash(frame):
 
 def fingerprint(path, metadata, cancel):
     step = 1.0 if metadata['duration'] >= 3 else 0.25
-    raw = run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-threads', '2', '-i', str(path), '-map', '0:v:0', '-an', '-vf', f'fps=1/{step}:start_time=0,scale=32:32:flags=area,format=gray', '-threads', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'], cancel)
+    raw = run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-threads', '2', '-i', str(path), '-map', '0:V:0', '-an', '-vf', f'fps=1/{step}:start_time=0,scale=32:32:flags=area,format=gray', '-threads', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'], cancel)
     hashes = []
     for i in range(len(raw) // 1024):
         cancel_check(cancel)
@@ -86,19 +94,57 @@ def fingerprint(path, metadata, cancel):
     return {'step': step, 'hashes': hashes}
 
 def fast_fingerprint(path, metadata, cancel, progress=None):
+    import av
+    try:
+        return _fast_pyav(path, metadata, cancel, progress)
+    except (av.FFmpegError, OSError, ValueError, EOFError) as primary_error:
+        cancel_check(cancel)
+        try:
+            return _fast_ffmpeg(path, metadata, cancel, progress)
+        except (OSError, ValueError, RuntimeError, EOFError) as fallback_error:
+            raise ValueError(tr('Quick decoding failed with both readers. First reader: {first}. Alternative reader: {second}', first=str(primary_error), second=str(fallback_error))) from fallback_error
+
+
+def _sample_grid(metadata):
+    duration = metadata['duration']
+    step = 0.25 if duration < 3 else float(2 ** max(0, math.ceil(math.log2(duration / 24))))
+    phase = 0.37 if duration >= 3 else 0.0
+    return step, list(np.arange(phase, max(phase + 0.001, duration - 0.1), step))[:24]
+
+
+def _fast_ffmpeg(path, metadata, cancel, progress=None):
+    """Alternative sparse reader, bounded to 45 seconds per video, never a full scan."""
+    step, targets = _sample_grid(metadata)
+    hashes = []
+    deadline = time.monotonic() + 45
+    for i, target in enumerate(targets):
+        cancel_check(cancel)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ValueError(tr('The alternative video reader exceeded its time limit.'))
+        if progress:
+            progress(i + 1, len(targets))
+        raw = run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-threads', '2', '-ss', str(float(target)), '-i', str(path),
+                         '-map', '0:V:0', '-frames:v', '1', '-an', '-vf', 'scale=32:32:flags=area,format=gray',
+                         '-threads', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'], cancel, timeout=min(12, remaining))
+        if len(raw) != 1024:
+            raise ValueError(tr('Could not read sample {p0}. Try the full profile.', p0=i + 1))
+        hashes.append(perceptual_hash(np.frombuffer(raw, dtype=np.uint8).reshape(32, 32)))
+    return {'step': step, 'hashes': hashes, 'profile': 'fast', 'estimated': True, 'reader': 'ffmpeg'}
+
+
+def _fast_pyav(path, metadata, cancel, progress=None):
     """Seek to at most 24 targets, reusing a single indexed decoder.
 
     Power-of-two intervals retain a common time grid after modest trims.
     Coverage from these sparse samples is explicitly an estimate.
     """
     import av
-    duration = metadata['duration']
-    step = 0.25 if duration < 3 else float(2 ** max(0, math.ceil(math.log2(duration / 24))))
-    phase = 0.37 if duration >= 3 else 0.0
-    targets = list(np.arange(phase, max(phase + 0.001, duration - 0.1), step))[:24]
+    step, targets = _sample_grid(metadata)
     hashes = []
     with av.open(str(path), timeout=(10, 10)) as container:
-        stream = container.streams.video[0]
+        index = metadata.get('video_stream_index')
+        stream = container.streams[index] if index is not None else container.streams.video[0]
         stream.codec_context.thread_count = 2
         origin = stream.start_time or 0
         for i, target in enumerate(targets):
@@ -238,4 +284,4 @@ def find_similar(records, similarity, coverage, cancel, progress=None):
     return matches
 
 def thumbnail(path, at, cancel, width=480, height=270):
-    return run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-ss', str(max(0, at)), '-i', str(path), '-map', '0:v:0', '-frames:v', '1', '-vf', f'scale={int(width)}:{int(height)}:force_original_aspect_ratio=decrease', '-threads', '1', '-f', 'image2pipe', '-vcodec', 'mjpeg', 'pipe:1'], cancel, timeout=60)
+    return run_media([binary('ffmpeg'), '-v', 'error', '-nostdin', '-ss', str(max(0, at)), '-i', str(path), '-map', '0:V:0', '-frames:v', '1', '-vf', f'scale={int(width)}:{int(height)}:force_original_aspect_ratio=decrease', '-threads', '1', '-f', 'image2pipe', '-vcodec', 'mjpeg', 'pipe:1'], cancel, timeout=60)

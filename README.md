@@ -49,6 +49,10 @@ Open **Settings > Preferences** to configure language, appearance, scan defaults
 
 Quick mode seeks to at most 24 sample points instead of decoding the entire video. Coverage is estimated from those samples. It can miss trims and edits that full mode finds. Full mode reads the timeline and retains approximately one frame per second. Both modes ignore audio and present visual candidates for manual review.
 
+If the quick decoder fails, an alternative FFmpeg reader retries the same sample grid, with a 45-second total limit and a 12-second limit per sample. It does not switch to full-video decoding. If both readers fail, the file remains an error. Embedded cover images are excluded from video analysis and previews. Version 1.2.2 refreshes video metadata and fingerprints once to use the corrected stream selection, while retaining exact-file hashes.
+
+**Video read error** identifies a video that could not be read. **Comparison incomplete** means the file itself was read but other failures prevent ruling out additional matches. Neither state confirms that a copy is absent. Open **Issues** for the actual failed files and their reader messages. You can also export a local report to retain these details.
+
 Similarity is a fingerprint score, not a probability that two files are interchangeable. Strong crops, watermarks, speed changes and extensive edits may not match. Lowering a threshold reuses existing fingerprints without decoding again. Quick and full fingerprints are cached separately.
 
 ## Build a portable executable
@@ -58,7 +62,7 @@ Similarity is a fingerprint score, not a probability that two files are intercha
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.2.1/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.2.2/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 

@@ -122,6 +122,15 @@ class ScanResult:
             return 'Error or pending'
         return 'No matches detected'
 
+    def display_status(self, key):
+        record = self.files[key]
+        if record.active and record.video_error and not record.error:
+            return 'Video read error'
+        status = self.classification(key)
+        if status == 'Error or pending' and not record.error:
+            return 'Comparison incomplete'
+        return status
+
 def human_size(value):
     size = float(value)
     for unit in ('B', 'KB', 'MB', 'GB', 'TB'):

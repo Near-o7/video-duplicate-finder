@@ -110,8 +110,10 @@ def scan(options: ScanOptions, cancel=None, progress=None, cache_path=None):
                 payload = cache.get(record)
                 shared = content_cache.get(record.digest, {}) if record.digest else {}
                 record.metadata = payload.get('metadata') or shared.get('metadata') or probe(record.path, cancel)
+                if 'video_stream_index' not in record.metadata:
+                    record.metadata = probe(record.path, cancel)
                 if options.similar:
-                    cache_key = 'fingerprint_fast_v2' if options.video_profile == 'fast' else 'fingerprint'
+                    cache_key = 'fingerprint_fast_v3' if options.video_profile == 'fast' else 'fingerprint_full_v3'
                     record.fingerprint = payload.get(cache_key) or shared.get(cache_key)
                     if not record.fingerprint:
                         if options.video_profile == 'fast':
