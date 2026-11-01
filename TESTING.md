@@ -30,6 +30,8 @@ python -m pytest -q
 - Populated result tables retain at least 20 visible rows at 1920 by 1020 and 11 at 1280 by 720 with the side comparison open.
 - Both preview decision buttons return keyboard focus to the table. Arrow navigation preserves checkboxes and keeper choices.
 - Adjustable dividers, alternate comparison placement and active review state survive row and preference changes.
+- Real header drag and double-click events resize columns without changing removal selection. Widths survive restart, language changes and hide/show operations.
+- Pending width saves flush on close, invalid widths are rejected, and preference resets apply on Save without changing column visibility.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 

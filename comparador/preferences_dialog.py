@@ -90,6 +90,14 @@ class PreferencesDialog(QDialog):
         self.restore_columns = QPushButton(tr('Show all columns'))
         self.restore_columns.clicked.connect(self.show_all_columns)
         column_layout.addWidget(self.restore_columns)
+        self.reset_widths = QPushButton(tr('Reset column widths'))
+        self.reset_widths.clicked.connect(self.reset_column_widths)
+        column_layout.addWidget(self.reset_widths)
+        self.width_note = QLabel(tr('Default widths will apply after saving.'))
+        self.width_note.setWordWrap(True)
+        self.width_note.hide()
+        column_layout.addWidget(self.width_note)
+        self.saved_widths = dict(preferences.column_widths)
         column_layout.addStretch()
         self.tabs.addTab(columns, tr('Result columns'))
         controls = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
@@ -101,6 +109,10 @@ class PreferencesDialog(QDialog):
         for check in self.column_checks.values():
             check.setChecked(True)
 
+    def reset_column_widths(self):
+        self.saved_widths = {}
+        self.width_note.show()
+
     def preferences(self):
         return replace(self.original, language=self.language.currentData(), theme=self.theme.currentData(),
                        two_folders=self.two_folders.isChecked(), recursive=self.recursive.isChecked(),
@@ -108,4 +120,5 @@ class PreferencesDialog(QDialog):
                        video_profile=self.profile.currentData(), similarity=self.similarity.value(),
                        coverage=self.coverage.value(), gallery_frames=self.gallery.currentData(),
                        comparison_position=self.comparison_position.currentData(),
+                       column_widths=dict(self.saved_widths),
                        visible_columns=[key for key, check in self.column_checks.items() if check.isChecked()])

@@ -12,6 +12,8 @@ RESULT_COLUMNS = (
     ('match', 'Match'), ('scores', 'Visual and coverage'),
 )
 REQUIRED_COLUMNS = {'remove', 'file'}
+DEFAULT_COLUMN_WIDTHS = {'remove': 110, 'file': 240, 'matches': 270, 'location': 90,
+                         'size': 82, 'duration': 78, 'resolution': 88, 'match': 140, 'scores': 130}
 
 
 @dataclass
@@ -28,6 +30,7 @@ class Preferences:
     gallery_frames: int = 12
     comparison_position: str = 'right'
     visible_columns: list[str] = field(default_factory=lambda: [key for key, _ in RESULT_COLUMNS])
+    column_widths: dict[str, int] = field(default_factory=dict)
 
     def validate(self):
         if self.language not in ("system", "es", "en") or self.theme not in ("system", "light", "dark"):
@@ -46,6 +49,11 @@ class Preferences:
         columns = set(self.visible_columns)
         if len(columns) != len(self.visible_columns) or not REQUIRED_COLUMNS <= columns or not columns <= {key for key, _ in RESULT_COLUMNS}:
             raise ValueError('Invalid result columns')
+        if not isinstance(self.column_widths, dict) or any(
+            key not in DEFAULT_COLUMN_WIDTHS or type(width) is not int or not 48 <= width <= 2400
+            for key, width in self.column_widths.items()
+        ):
+            raise ValueError('Invalid column widths')
 
 
 def load_preferences(path=None):

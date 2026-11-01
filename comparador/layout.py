@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import *
 from .appearance import icon
 from . import __version__
-from .settings import RESULT_COLUMNS
+from .settings import RESULT_COLUMNS, DEFAULT_COLUMN_WIDTHS
 
 def build_window(w):
     from .ui import label, button, PreviewCard
@@ -194,10 +194,11 @@ def build_window(w):
     w.table.setSortingEnabled(True)
     header = w.table.horizontalHeader()
     header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-    w.table.setColumnWidth(1, 240)
-    w.table.setColumnWidth(2, 270)
-    for col, width in [(0, 110), (3, 90), (4, 82), (5, 78), (6, 88), (7, 140), (8, 130)]:
-        w.table.setColumnWidth(col, width)
+    header.setMinimumSectionSize(48)
+    header.setMaximumSectionSize(2400)
+    header.setToolTip(tr('Drag a column border to resize it. Double-click the border to fit its contents. Widths are saved automatically.'))
+    for col, (key, _) in enumerate(RESULT_COLUMNS):
+        w.table.setColumnWidth(col, w.preferences.column_widths.get(key, DEFAULT_COLUMN_WIDTHS[key]))
     header.sectionClicked.connect(lambda col: w.toggle_all_visible() if col == 0 else None)
     w.table.itemSelectionChanged.connect(w.show_details)
     w.table.itemChanged.connect(w.update_actions)

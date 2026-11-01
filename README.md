@@ -43,6 +43,8 @@ Use **Hide comparison** and **Show comparison** beside the selection controls to
 
 The comparison appears to the right of the table by default, with both copies stacked vertically. Drag the divider to adjust the space. This keeps the full table height available for browsing. Choose **Settings > Preferences > General > Comparison position** to place the comparison below the table instead. Compact previews retain additional frames, expanded images and full paths in tooltips. Narrow windows use scrolling to keep all columns and comparison controls accessible.
 
+Drag the border between column headers to change a column's width, or double-click the border to fit its contents. Widths are saved automatically and restored on the next launch, including for columns you hide and show later. Choose **Settings > Preferences > Result columns > Reset column widths**, then **Save**, to restore the original widths without changing which columns are visible.
+
 After choosing **Keep this copy** or **Select for removal**, keyboard focus returns to the table. Use the Up and Down arrows to continue reviewing while keeping all removal checkboxes and keeper choices. The header shows the folder and scan counts once. **Scan details** opens the explanatory text, and progress is visible while work is running. Protected-file and hidden-selection warnings remain visible when relevant.
 
 Choosing a copy to keep clears its removal selection. If you later mark that reference for removal, earlier files that depended on it are kept and an explanatory notice appears. A previously reviewed visual keeper goes straight to the final confirmation. If all direct matches are selected for removal, the warning names the file and the matching paths that need a keeper.
@@ -66,7 +68,7 @@ Similarity is a fingerprint score, not a probability that two files are intercha
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.0/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.1/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 
