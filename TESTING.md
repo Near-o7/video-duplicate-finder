@@ -20,6 +20,10 @@ python -m pytest -q
 - Bulk selection, selections outside filters, per-preview keeper choices and explicit unlock confirmation.
 - Preference validation and persistence without paths, English and Spanish interfaces, light and dark palettes, expanded frames and lazy gallery loading.
 - Progress hidden when the application is idle.
+- One-folder filters exclude secondary-folder options, with consistent filters after language changes.
+- Visual keeper selection reaches the final removal confirmation, overlapping pairs retain valid references, and invalid selections identify affected paths.
+- Matching file names and pair identifiers in the result list, full-width decision buttons and a persistent comparison toggle.
+- Saved result-column visibility, required columns, restoring all columns, and applying settings without losing reviewed keepers.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 

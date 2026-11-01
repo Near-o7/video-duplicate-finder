@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import *
 from .appearance import icon
 from . import __version__
+from .settings import RESULT_COLUMNS
 
 def build_window(w):
     from .ui import label, button, PreviewCard
@@ -124,22 +125,24 @@ def build_window(w):
     main.addWidget(w.notice)
     counts = QHBoxLayout()
     w.metrics = []
+    w.metric_labels = []
     for suffix in (tr('files'), tr('exact groups'), tr('similar pairs'), tr('secondary files without an exact copy')):
         metric = label('N/A', 'section')
         w.metrics.append(metric)
         counts.addWidget(metric)
-        counts.addWidget(label(suffix, 'muted'))
+        caption = label(suffix, 'muted')
+        w.metric_labels.append(caption)
+        counts.addWidget(caption)
         counts.addSpacing(16)
     counts.addStretch()
     main.addLayout(counts)
     filters = QHBoxLayout()
-    filters.addWidget(label(tr('Show files from')))
+    w.scope_label = label(tr('Show files from'))
+    filters.addWidget(w.scope_label)
     w.scope_filter = QComboBox()
-    w.scope_filter.addItems([tr('Both folders'), tr('Primary'), tr('Secondary')])
     w.scope_filter.currentIndexChanged.connect(w.populate)
     filters.addWidget(w.scope_filter)
     w.view_filter = QComboBox()
-    w.view_filter.addItems([tr('All results'), tr('Exact copies'), tr('Possible video duplicates'), tr('Secondary files without an exact primary copy'), tr('Secondary files without matches'), tr('Duplicates within primary'), tr('Duplicates within secondary'), tr('Errors or pending files'), tr('All matches')])
     w.view_filter.currentIndexChanged.connect(w.populate)
     filters.addWidget(w.view_filter)
     w.search = QLineEdit()
@@ -160,14 +163,18 @@ def build_window(w):
     w.clear_button = button(tr('Clear selection'))
     w.clear_button.clicked.connect(w.clear_selection)
     selection.addWidget(w.clear_button)
+    w.comparison_toggle = button(tr('Show comparison'))
+    w.comparison_toggle.setEnabled(False)
+    w.comparison_toggle.clicked.connect(w.toggle_comparison)
+    selection.addWidget(w.comparison_toggle)
     selection.addStretch()
     w.selected_label = label(tr('0 selected'), 'section')
     selection.addWidget(w.selected_label)
     main.addLayout(selection)
     split = QSplitter(Qt.Orientation.Vertical)
     w.results_split = split
-    w.table = QTableWidget(0, 8)
-    w.table.setHorizontalHeaderLabels([tr('Select'), tr('File and group'), tr('Location'), tr('Size'), tr('Duration'), tr('Resolution'), tr('Match'), tr('Visual and coverage')])
+    w.table = QTableWidget(0, 9)
+    w.table.setHorizontalHeaderLabels([tr(title) for _, title in RESULT_COLUMNS])
     w.table.setAlternatingRowColors(True)
     w.table.setShowGrid(False)
     w.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -179,7 +186,8 @@ def build_window(w):
     header = w.table.horizontalHeader()
     header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
     header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-    for col, width in [(0, 65), (2, 100), (3, 88), (4, 82), (5, 90), (6, 205), (7, 150)]:
+    header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+    for col, width in [(0, 110), (3, 90), (4, 82), (5, 78), (6, 88), (7, 140), (8, 130)]:
         w.table.setColumnWidth(col, width)
     header.sectionClicked.connect(lambda col: w.toggle_all_visible() if col == 0 else None)
     w.table.itemSelectionChanged.connect(w.show_details)
@@ -194,9 +202,6 @@ def build_window(w):
     w.peer_combo.currentIndexChanged.connect(w.show_peer)
     peer_row = QHBoxLayout()
     peer_row.addWidget(w.peer_combo, 1)
-    hide_preview = button(tr('Hide comparison'))
-    hide_preview.clicked.connect(lambda: w.preview_scroll.hide())
-    peer_row.addWidget(hide_preview)
     details.addLayout(peer_row)
     cards = QHBoxLayout()
     w.left_preview = PreviewCard(tr('FILE UNDER REVIEW'))
@@ -242,3 +247,5 @@ def build_window(w):
     bottom.addWidget(w.progress)
     main.addLayout(bottom)
     w.config_widgets = [w.folder_mode, w.primary_path, w.secondary_path, w.recursive, w.file_filter, w.analysis_mode, w.video_profile, w.similarity, w.coverage, w.unlock]
+    w.folder_mode.currentIndexChanged.connect(w.configure_result_filters)
+    w.configure_result_filters()

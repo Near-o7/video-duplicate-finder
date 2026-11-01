@@ -54,12 +54,32 @@ def run_selftest(report_path):
             assert window.table.rowCount() == 4
             assert not window.selected_keys()
             assert window.scan_button.text() == 'Scan'
+            converted = next(f for f in result.files.values() if Path(f.path).name == 'convertido.mkv')
+            row = window.visible_keys().index(converted.key)
+            window.table.setCurrentCell(row, 1)
+            window.show_details()
+            window.choose_preview(False)
+            from .operations import plan_actions
+            planned = plan_actions(result, window.selected_keys(), 'trash', keepers=window.choose_keepers(window.selected_keys()))
+            assert len(planned) == 1 and planned[0].key == converted.key
+            assert planned[0].keeper not in window.checked_keys
+            window.toggle_comparison()
+            assert window.preview_scroll.isHidden() and window.comparison_toggle.isEnabled()
+            window.toggle_comparison()
+            assert not window.preview_scroll.isHidden()
             from dataclasses import replace
             from PySide6.QtGui import QPalette
             window.apply_preferences(replace(window.preferences,theme='dark',language='es'))
             assert window.scan_button.text() == 'Analizar'
             assert window.palette().color(QPalette.ColorRole.Window).lightness() < 100
             assert not window.progress.isVisible()
+            assert window.preferred_keepers[converted.key] == planned[0].keeper
+            single = scan(ScanOptions(b, similar=True), cache_path=root / 'cache.db')
+            window.new_scan = True
+            window.scan_done(single)
+            assert window.scope_filter.isHidden()
+            assert window.view_filter.findData(3) == -1
+            assert window.view_filter.findData(4) == -1
             for job in window.jobs:
                 job.cancel.set()
             limit = time.monotonic() + 10

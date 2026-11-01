@@ -17,7 +17,7 @@ from .operations import plan_actions, execute_actions
 from .reports import export_csv, export_html
 from .video import find_similar, thumbnail
 from .appearance import apply_theme, icon, status_color
-from .settings import load_preferences, save_preferences
+from .settings import load_preferences, save_preferences, RESULT_COLUMNS
 from .i18n import set_language
 from .layout import build_window
 from .selection import redundant_keys
@@ -114,6 +114,7 @@ class MainWindow(QMainWindow):
 
     def _build(self):
         build_window(self)
+        self.apply_result_columns()
         self.menuBar().clear()
         menu = self.menuBar().addMenu(tr('Settings'))
         self.settings_action = menu.addAction(tr('Preferences...'))
@@ -128,6 +129,10 @@ class MainWindow(QMainWindow):
         shortcut.activated.connect(self.select_all_visible)
         self.select_all_shortcut = shortcut
 
+    def apply_result_columns(self):
+        for index, (key, _) in enumerate(RESULT_COLUMNS):
+            self.table.setColumnHidden(index, key not in self.preferences.visible_columns)
+
     def apply_defaults(self):
         p = self.preferences
         self.folder_mode.setCurrentIndex(int(p.two_folders))
@@ -137,6 +142,42 @@ class MainWindow(QMainWindow):
         self.video_profile.setCurrentIndex(0 if p.video_profile == 'fast' else 1)
         self.similarity.setValue(p.similarity)
         self.coverage.setValue(p.coverage)
+
+    def configure_result_filters(self, *_):
+        two = bool(self.result.options.secondary) if self.result else self.folder_mode.currentIndex() == 1
+        scope = self.scope_filter.currentData()
+        view = self.view_filter.currentData()
+        if two != getattr(self, '_filter_two', two):
+            scope = 0 if two else 1
+        self._filter_two = two
+        for combo in (self.scope_filter, self.view_filter):
+            combo.blockSignals(True)
+            combo.clear()
+        scopes = [('Both folders', 0), ('Primary', 1), ('Secondary', 2)] if two else [('This folder', 1)]
+        views = [('All results', 0), ('Exact copies', 1), ('Possible video duplicates', 2)]
+        if two:
+            views += [('Secondary files without an exact primary copy', 3), ('Secondary files without matches', 4),
+                      ('Duplicates within primary', 5), ('Duplicates within secondary', 6)]
+        views += [('Errors or pending files', 7), ('All matches', 8)]
+        for title, value in scopes:
+            self.scope_filter.addItem(tr(title), value)
+        for title, value in views:
+            self.view_filter.addItem(tr(title), value)
+        for combo, value in [(self.scope_filter, scope), (self.view_filter, view)]:
+            index = combo.findData(value)
+            combo.setCurrentIndex(max(0, index))
+            combo.blockSignals(False)
+        self.scope_label.setVisible(two)
+        self.scope_filter.setVisible(two)
+        self.unlock.setVisible(two)
+        self.metrics[3].setVisible(two)
+        self.metric_labels[3].setVisible(two)
+        self.primary_label.setText(tr('Primary folder for reference copies') if self.folder_mode.currentIndex() else tr('Folder to review'))
+
+    def file_location(self, record):
+        if not self.result.options.secondary:
+            return tr('This folder')
+        return tr('Primary') if record.root == 'primary' else tr('Secondary')
 
     def system_theme_changed(self, *_):
         app = QApplication.instance()
@@ -165,8 +206,9 @@ class MainWindow(QMainWindow):
         recursive, unlocked = self.recursive.isChecked(), self.unlock.isChecked()
         thresholds = self.similarity.value(), self.coverage.value()
         selection = set(self.checked_keys)
+        preferred_keepers = dict(self.preferred_keepers)
         result = self.result
-        scope, view, query = self.scope_filter.currentIndex(), self.view_filter.currentIndex(), self.search.text()
+        scope, view, query = self.scope_filter.currentData(), self.view_filter.currentData(), self.search.text()
         if self.thumb_worker:
             self.thumb_worker.cancel.set()
         self.preview_generation += 1
@@ -178,9 +220,9 @@ class MainWindow(QMainWindow):
         old.deleteLater()
         self.setWindowTitle(tr('Video Duplicate Finder {p0}', p0=__version__))
         if result:
-            for control, index in [(self.scope_filter,scope),(self.view_filter,view)]:
+            for control, value in [(self.scope_filter,scope),(self.view_filter,view)]:
                 control.blockSignals(True)
-                control.setCurrentIndex(index)
+                control.setCurrentIndex(max(0, control.findData(value)))
                 control.blockSignals(False)
             self.search.blockSignals(True)
             self.search.setText(query)
@@ -192,6 +234,7 @@ class MainWindow(QMainWindow):
             self.coverage.setValue(thresholds[1])
             self.unlock.setChecked(unlocked)
             self.scan_done(result)
+            self.preferred_keepers = preferred_keepers
             self.set_checked(selection)
         else:
             self.apply_defaults()
@@ -276,16 +319,18 @@ class MainWindow(QMainWindow):
 
     def scan_done(self, result):
         self.result = result
-        names = tr('Primary: ') + result.options.primary.name
+        self.configure_result_filters()
+        names = (tr('Primary: ') if result.options.secondary else tr('Folder: ')) + result.options.primary.name
         if result.options.secondary:
             names += tr('. Secondary: ') + result.options.secondary.name
         self.root_summary.setText(names)
         self.root_summary.setToolTip(str(result.options.primary) + ('\n' + str(result.options.secondary) if result.options.secondary else ''))
         self.root_summary.show()
         self.checked_keys.clear()
+        self.preferred_keepers.clear()
         if self.new_scan:
             self.scope_filter.blockSignals(True)
-            self.scope_filter.setCurrentIndex(2 if result.options.secondary else 1)
+            self.scope_filter.setCurrentIndex(self.scope_filter.findData(2 if result.options.secondary else 1))
             self.scope_filter.blockSignals(False)
             if result.files and (not result.cancelled):
                 self.setup_panel.hide()
@@ -372,15 +417,16 @@ class MainWindow(QMainWindow):
         result = self.result
         checked = self.checked_keys
         search = self.search.text().casefold()
-        filter_index = self.view_filter.currentIndex()
+        filter_index = self.view_filter.currentData()
         self.table.blockSignals(True)
         self.table.setSortingEnabled(False)
         self.table.setRowCount(0)
         groups = {k: n + 1 for n, g in enumerate(result.exact_groups) for k in g}
+        self.visual_pair_ids = {id(match): f'V{n:03d}' for n, match in enumerate(result.similar_matches, 1)}
         for key, f in result.files.items():
             if not f.active or search not in f.path.casefold():
                 continue
-            scope = self.scope_filter.currentIndex()
+            scope = self.scope_filter.currentData()
             if scope == 1 and f.root != 'primary' or (scope == 2 and f.root != 'secondary'):
                 continue
             peers = result.exact_peers(key)
@@ -411,21 +457,36 @@ class MainWindow(QMainWindow):
             check.setData(Qt.ItemDataRole.UserRole, key)
             self.table.setItem(row, 0, check)
             best = max((m for _, m in visual), key=lambda m: (m.coverage, m.similarity), default=None)
-            name = Path(f.path).name + (tr(' (G{p0})', p0=f'{groups[key]:03d}') if key in groups else '')
+            name = Path(f.path).name
+            relations = []
+            relation_count = len(peers) + len(visual)
+            # Keep row tooltips bounded even for groups with thousands of copies.
+            for peer in peers[:20]:
+                relations.append((f'G{groups[key]:03d}', peer))
+            for peer, match in visual[:20 - len(relations)]:
+                relations.append((self.visual_pair_ids[id(match)], peer))
+            match_text = f'{relations[0][0]}: {Path(relations[0][1].path).name}' if relations else tr('No matches')
+            if relation_count > 1:
+                match_text += tr(' (+{count} more)', count=relation_count - 1)
+            match_tooltip = '\n\n'.join(f'{pair}: {peer.path}' for pair, peer in relations)
+            if relation_count > len(relations):
+                match_tooltip += '\n\n' + tr('{count} additional matches. Select this row to review all matching copies.', count=relation_count - len(relations))
             resolution = f"{f.metadata.get('width', 0)} × {f.metadata.get('height', 0)}" if f.metadata else 'N/A'
             display_status = {'No matches detected': tr('No matches'), 'Error or pending': tr('Error or pending')}.get(classification, classification)
-            values = [name, tr('Primary') if f.root == 'primary' else tr('Secondary'), human_size(f.size), duration_text(f.metadata.get('duration')), resolution, display_status, f'{best.similarity:.0f}% / {best.coverage:.0f}%' if best else 'N/A']
-            sorts = [name.casefold(), f.root, f.size, f.metadata.get('duration', 0), f.metadata.get('width', 0) * f.metadata.get('height', 0), classification, best.similarity if best else 0]
+            values = [name, match_text, self.file_location(f), human_size(f.size), duration_text(f.metadata.get('duration')), resolution, display_status, f'{best.similarity:.0f}% / {best.coverage:.0f}%' if best else 'N/A']
+            sorts = [name.casefold(), match_text.casefold(), f.root, f.size, f.metadata.get('duration', 0), f.metadata.get('width', 0) * f.metadata.get('height', 0), classification, best.similarity if best else 0]
             for col, (text, sort) in enumerate(zip(values, sorts), 1):
-                item = SortItem(tr(text))
+                item = SortItem(text)
                 item.setData(Qt.ItemDataRole.UserRole + 1, sort)
-                item.setToolTip(f.path + '\n' + classification + ('\n' + (f.error or f.video_error) if f.error or f.video_error else ''))
-                if col == 6:
+                item.setToolTip(match_tooltip if col == 2 and relations else f.path + '\n' + tr(classification) + ('\n' + (f.error or f.video_error) if f.error or f.video_error else ''))
+                if col == 7:
+                    item.setText(tr(text))
                     item.setForeground(status_color(classification))
                 self.table.setItem(row, col, item)
         self.table.setSortingEnabled(True)
         self.table.blockSignals(False)
         self.update_actions()
+        self.comparison_toggle.setEnabled(bool(self.table.rowCount()))
         if self.table.rowCount():
             self.table.selectRow(0)
         else:
@@ -434,6 +495,8 @@ class MainWindow(QMainWindow):
             self.peer_combo.clear()
             self.peer_entries = []
             self.current_key = None
+            self.preview_scroll.hide()
+            self.comparison_toggle.setText(tr('Show comparison'))
             if self.thumb_worker:
                 self.thumb_worker.cancel.set()
 
@@ -477,6 +540,13 @@ class MainWindow(QMainWindow):
         if hidden:
             hint += tr(' {p0} selected files are outside the current filter.', p0=f'{hidden}')
         self.selection_hint.setText(hint)
+        keepers = {keeper for key, keeper in self.preferred_keepers.items() if key in self.checked_keys and keeper not in self.checked_keys}
+        self.table.blockSignals(True)
+        for item in [self.table.item(row, 0) for row in range(self.table.rowCount())]:
+            key = item.data(Qt.ItemDataRole.UserRole)
+            item.setText(tr('Remove') if key in self.checked_keys else tr('Keep') if key in keepers else '')
+            item.setToolTip(tr('Checked files are selected for removal. A highlighted row only opens the comparison.'))
+        self.table.blockSignals(False)
         self.update_preview_decisions()
 
     def clear_selection(self):
@@ -526,6 +596,7 @@ class MainWindow(QMainWindow):
             return
         first_preview = self.preview_scroll.isHidden()
         self.preview_scroll.show()
+        self.comparison_toggle.setText(tr('Hide comparison'))
         if first_preview:
             QTimer.singleShot(0, lambda: self.results_split.setSizes([max(160,self.results_split.height()-410),410]))
         key = self.table.item(row, 0).data(Qt.ItemDataRole.UserRole)
@@ -535,16 +606,28 @@ class MainWindow(QMainWindow):
         self.peer_entries = []
         for peer in self.result.exact_peers(key):
             self.peer_entries.append((peer, None))
-            self.peer_combo.addItem(tr('{p0}, {p1}, exact copy', p0=f'{Path(peer.path).name}', p1=f"{(tr('Primary') if peer.root == 'primary' else tr('Secondary'))}"))
+            self.peer_combo.addItem(tr('{p0}, {p1}, exact copy', p0=f'{Path(peer.path).name}', p1=self.file_location(peer)))
             self.peer_combo.setItemData(self.peer_combo.count() - 1, peer.path, Qt.ItemDataRole.ToolTipRole)
         for peer, match in self.result.visual_peers(key):
             self.peer_entries.append((peer, match))
-            self.peer_combo.addItem(tr('{p0}, {p1}, {p2}% visual, {p3}%{p4} coverage', p0=f'{Path(peer.path).name}', p1=f"{(tr('Primary') if peer.root == 'primary' else tr('Secondary'))}", p2=f'{match.similarity:.1f}', p3=f'{match.coverage:.1f}', p4=f"{(tr(' estimated') if match.estimated else '')}"))
+            self.peer_combo.addItem(self.visual_pair_ids[id(match)] + ': ' + tr('{p0}, {p1}, {p2}% visual, {p3}%{p4} coverage', p0=f'{Path(peer.path).name}', p1=self.file_location(peer), p2=f'{match.similarity:.1f}', p3=f'{match.coverage:.1f}', p4=f"{(tr(' estimated') if match.estimated else '')}"))
             self.peer_combo.setItemData(self.peer_combo.count() - 1, peer.path, Qt.ItemDataRole.ToolTipRole)
         if not self.peer_entries:
             self.peer_combo.addItem(tr('No matching copy to compare'))
         self.peer_combo.blockSignals(False)
+        preferred = self.preferred_keepers.get(key)
+        if preferred:
+            self.peer_combo.blockSignals(True)
+            self.peer_combo.setCurrentIndex(next((i for i, (peer, _) in enumerate(self.peer_entries) if peer.key == preferred), 0))
+            self.peer_combo.blockSignals(False)
         self.show_peer()
+
+    def toggle_comparison(self):
+        if self.preview_scroll.isHidden():
+            self.show_details()
+        else:
+            self.preview_scroll.hide()
+            self.comparison_toggle.setText(tr('Show comparison'))
 
     def show_peer(self, *_):
         if not self.current_key or not self.result:
@@ -552,6 +635,8 @@ class MainWindow(QMainWindow):
         f = self.result.files[self.current_key]
         i = self.peer_combo.currentIndex()
         peer, match = self.peer_entries[i] if 0 <= i < len(self.peer_entries) else (None, None)
+        for card in (self.left_preview, self.right_preview):
+            card.single_folder = not self.result.options.secondary
         self.left_preview.set_record(f)
         self.right_preview.set_record(peer)
         if match:
@@ -580,7 +665,7 @@ class MainWindow(QMainWindow):
                 if card.record.key in self.checked_keys:
                     card.heading.setText(tr('Copy selected for removal'))
                     card.decision.setText(tr('Selected for removal. Confirmation is still required.'))
-                elif card.record.key in self.preferred_keepers.values():
+                elif any(key in self.checked_keys and keeper == card.record.key for key, keeper in self.preferred_keepers.items()):
                     card.heading.setText(tr('Copy to keep'))
                     card.decision.setText(tr('This copy will be kept.'))
                 else:
@@ -602,8 +687,31 @@ class MainWindow(QMainWindow):
         keys = set(self.checked_keys)
         keys.discard(keep.key)
         keys.add(remove.key)
-        self.preferred_keepers[remove.key] = keep.key
+        # A visual match is not transitive. Keep previous dependents instead of
+        # silently replacing their reference with a video they were not paired with.
+        restored = {key for key in keys if self.preferred_keepers.get(key) == remove.key}
+        keys.difference_update(restored)
+        for group in self.result.exact_groups:
+            active = {key for key in group if self.result.files[key].active}
+            if active and active <= keys:
+                reference = min(active - {remove.key}, default=remove.key)
+                keys.discard(reference)
+                restored.add(reference)
+        # Bulk/manual checkbox selections may not have a reviewed keeper yet.
+        # Do not leave those files selected if this choice removes their only match.
+        for key in sorted(keys - {remove.key}):
+            matches = {peer.key for peer in self.result.exact_peers(key)}
+            matches.update(peer.key for peer, _ in self.result.visual_peers(key))
+            if matches and not matches - keys:
+                keys.discard(key)
+                restored.add(key)
+        for key in restored | {keep.key}:
+            self.preferred_keepers.pop(key, None)
+        if remove.key in keys:
+            self.preferred_keepers[remove.key] = keep.key
         self.set_checked(keys)
+        if restored:
+            self.notice.setText(tr('{count} earlier selections were kept because their reference is now selected for removal. Review them before choosing another reference.', count=len(restored)))
 
     def load_thumbnails(self, records, times):
         if self.thumb_worker:
@@ -741,9 +849,15 @@ class MainWindow(QMainWindow):
         for key in keys:
             if self.result.exact_peers(key):
                 continue
-            peers = [(p, m) for p, m in self.result.visual_peers(key) if p.key not in selected]
+            matches = self.result.visual_peers(key)
+            peers = [(p, m) for p, m in matches if p.key not in selected and not p.error and p.unchanged()]
             if not peers:
-                raise ValueError(tr('There is no copy to keep. Uncheck a reference or use Select extra copies. Files without matches can be moved to another folder.'))
+                record = self.result.files[key]
+                if matches and all(p.key in selected for p, _ in matches):
+                    raise ValueError(tr('All matches for "{name}" are selected for removal. Keep one of these files first:\n{paths}', name=Path(record.path).name, paths='\n'.join(p.path for p, _ in matches)))
+                raise ValueError(tr('No available matching copy remains for "{name}". Scan again if a file changed. Files without matches can be moved to another folder.', name=Path(record.path).name))
+            if self.preferred_keepers.get(key) in {p.key for p, _ in peers}:
+                continue
             peers.sort(key=lambda item: (item[0].key != self.preferred_keepers.get(key), item[0].root != 'primary', item[0].path.lower()))
             entries.append((key, peers))
         if not entries:
@@ -753,7 +867,7 @@ class MainWindow(QMainWindow):
         dialog.resize(1000, 460)
         layout = QVBoxLayout(dialog)
         layout.addWidget(label(tr('Choose which copy to keep for each similar video'), 'section'))
-        layout.addWidget(label(tr('Primary references appear first. These are visual matches. Audio and editing may differ.'), 'muted', True))
+        layout.addWidget(label(tr('Primary references appear first. These are visual matches. Audio and editing may differ.') if self.result.options.secondary else tr('These are visual matches. Audio and editing may differ.'), 'muted', True))
         table = QTableWidget(len(entries), 2)
         table.setHorizontalHeaderLabels([tr('Video to remove'), tr('Video to keep')])
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -762,14 +876,14 @@ class MainWindow(QMainWindow):
         combos = {}
         for row, (key, peers) in enumerate(entries):
             record = self.result.files[key]
-            role = tr('Primary') if record.root == 'primary' else tr('Secondary')
+            role = self.file_location(record)
             item = QTableWidgetItem(f'{Path(record.path).name}\n{role}, {Path(record.path).parent}')
             item.setToolTip(record.path)
             item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             table.setItem(row, 0, item)
             combo = QComboBox()
             for peer, match in peers:
-                combo.addItem(tr('{p0}, {p1}, {p2}', p0=f'{Path(peer.path).name}', p1=f"{(tr('Primary') if peer.root == 'primary' else tr('Secondary'))}", p2=f'{Path(peer.path).parent}'), peer.key)
+                combo.addItem(tr('{p0}, {p1}, {p2}', p0=f'{Path(peer.path).name}', p1=self.file_location(peer), p2=f'{Path(peer.path).parent}'), peer.key)
                 combo.setItemData(combo.count() - 1, peer.path, Qt.ItemDataRole.ToolTipRole)
             combo.setToolTip(peers[0][0].path)
             table.setCellWidget(row, 1, combo)

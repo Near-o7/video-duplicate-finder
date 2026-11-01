@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.1
+
+- Added persisted result-column visibility controls in a dedicated settings tab, with file names and removal selection always visible.
+- Restricted one-folder result filters to relevant options and hid secondary-folder controls and counts.
+- Added matching file names and shared exact-group or visual-pair identifiers to the result list, alongside explicit keep and removal labels.
+- Fixed conflicting keeper choices across visual pairs by retaining earlier dependents when their reference is selected for removal.
+- Reused valid per-preview keeper choices in the final confirmation and added file-specific messages for unavailable references.
+- Added a persistent Show comparison and Hide comparison button.
+- Expanded both per-preview decision buttons to share the available horizontal space.
+
 ## 1.2.0
 
 - Added a separate preferences window with persisted defaults, light, dark and system appearance, and English and Spanish interfaces.

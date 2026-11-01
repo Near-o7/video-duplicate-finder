@@ -1,10 +1,17 @@
 """Preferences contain defaults only. File paths and selections are never saved."""
-from dataclasses import dataclass, asdict, fields
+from dataclasses import dataclass, asdict, fields, field
 from pathlib import Path
 import json
 import os
 
 from .cache import data_dir
+
+RESULT_COLUMNS = (
+    ('remove', 'Remove'), ('file', 'File'), ('matches', 'Matches with'), ('location', 'Location'),
+    ('size', 'Size'), ('duration', 'Duration'), ('resolution', 'Resolution'),
+    ('match', 'Match'), ('scores', 'Visual and coverage'),
+)
+REQUIRED_COLUMNS = {'remove', 'file'}
 
 
 @dataclass
@@ -19,6 +26,7 @@ class Preferences:
     similarity: int = 90
     coverage: int = 80
     gallery_frames: int = 12
+    visible_columns: list[str] = field(default_factory=lambda: [key for key, _ in RESULT_COLUMNS])
 
     def validate(self):
         if self.language not in ("system", "es", "en") or self.theme not in ("system", "light", "dark"):
@@ -30,6 +38,11 @@ class Preferences:
         for field in ("two_folders", "recursive", "videos_only", "similar"):
             if type(getattr(self, field)) is not bool:
                 raise ValueError("Invalid boolean preference")
+        if not isinstance(self.visible_columns, list) or any(type(key) is not str for key in self.visible_columns):
+            raise ValueError('Invalid result columns')
+        columns = set(self.visible_columns)
+        if len(columns) != len(self.visible_columns) or not REQUIRED_COLUMNS <= columns or not columns <= {key for key, _ in RESULT_COLUMNS}:
+            raise ValueError('Invalid result columns')
 
 
 def load_preferences(path=None):

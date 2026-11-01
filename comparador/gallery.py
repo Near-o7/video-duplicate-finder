@@ -71,9 +71,8 @@ class PreviewCard(QFrame):
         self.keep = QPushButton(tr("Keep this copy"))
         self.keep.setIcon(icon("select"))
         self.remove = QPushButton(tr("Select for removal"))
-        decisions.addWidget(self.keep)
-        decisions.addWidget(self.remove)
-        decisions.addStretch()
+        decisions.addWidget(self.keep, 1)
+        decisions.addWidget(self.remove, 1)
         layout.addLayout(decisions)
         self.decision = QLabel()
         self.decision.setWordWrap(True)
@@ -148,7 +147,7 @@ class PreviewCard(QFrame):
         self.more.hide()
         if record:
             self.name.setText(Path(record.path).name)
-            role = tr("Primary") if record.root == "primary" else tr("Secondary")
+            role = tr("This folder") if getattr(self, "single_folder", False) else tr("Primary") if record.root == "primary" else tr("Secondary")
             self.path.setText(role + ": " + str(Path(record.path).parent))
             self.path.setToolTip(record.path)
             data = record.metadata

@@ -24,7 +24,7 @@ def main():
     ffmpeg = args.ffmpeg_dir or Path(shutil.which("ffmpeg") or "").parent
     if not all((ffmpeg/name).is_file() for name in ("ffmpeg.exe","ffprobe.exe")):
         raise SystemExit("Use --ffmpeg-dir to specify the FFmpeg bin directory.")
-    release = ROOT / "dist" / ("v" + ".".join(__version__.split(".")[:2]))
+    release = ROOT / "dist" / ("v" + __version__)
     command = [sys.executable,"-m","PyInstaller","--noconfirm","--clean","--onedir","--windowed",
                "--name",APP,"--distpath",str(release),"--workpath",str(ROOT/"build"),"--specpath",str(ROOT/"build"),
                "--noupx","--exclude-module","tkinter","--exclude-module","PIL","--exclude-module","PySide6.QtQml","--exclude-module","PySide6.QtQuick",

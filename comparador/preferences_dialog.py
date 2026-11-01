@@ -1,6 +1,7 @@
 from dataclasses import replace
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QComboBox, QCheckBox, QSpinBox, QLabel, QDialogButtonBox
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QComboBox, QCheckBox, QSpinBox, QLabel, QDialogButtonBox, QTabWidget, QWidget, QPushButton, QGridLayout, QScrollArea
 from .i18n import tr
+from .settings import RESULT_COLUMNS, REQUIRED_COLUMNS
 
 
 class PreferencesDialog(QDialog):
@@ -8,12 +9,17 @@ class PreferencesDialog(QDialog):
         super().__init__(parent)
         self.original = preferences
         self.setWindowTitle(tr("Settings"))
-        self.resize(560, 560)
+        self.resize(600, 550)
         layout = QVBoxLayout(self)
         note = QLabel(tr("Theme and language apply immediately after saving. Scan defaults apply to new comparisons. Folder paths are not saved."))
         note.setWordWrap(True)
         layout.addWidget(note)
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs, 1)
+        general = QWidget()
         form = QFormLayout()
+        general.setLayout(form)
+        self.tabs.addTab(general, tr('General'))
         self.language = QComboBox()
         for text, value in [("System", "system"), ("Español", "es"), ("English", "en")]:
             self.language.addItem(tr(text), value)
@@ -24,6 +30,17 @@ class PreferencesDialog(QDialog):
             self.theme.addItem(tr(text), value)
         self.theme.setCurrentIndex(self.theme.findData(preferences.theme))
         form.addRow(tr("Appearance"), self.theme)
+        self.gallery = QComboBox()
+        self.gallery.addItem("12", 12)
+        self.gallery.addItem("24", 24)
+        self.gallery.setCurrentIndex(self.gallery.findData(preferences.gallery_frames))
+        form.addRow(tr("Frames per gallery"), self.gallery)
+        scan = QWidget()
+        form = QFormLayout(scan)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(scan)
+        self.tabs.addTab(scroll, tr('Scan defaults'))
         self.two_folders = QCheckBox(tr("Compare primary and secondary by default"))
         self.two_folders.setChecked(preferences.two_folders)
         form.addRow(self.two_folders)
@@ -51,21 +68,38 @@ class PreferencesDialog(QDialog):
         self.coverage.setSuffix(" %")
         self.coverage.setValue(preferences.coverage)
         form.addRow(tr("Minimum content coverage"), self.coverage)
-        self.gallery = QComboBox()
-        self.gallery.addItem("12", 12)
-        self.gallery.addItem("24", 24)
-        self.gallery.setCurrentIndex(self.gallery.findData(preferences.gallery_frames))
-        form.addRow(tr("Frames per gallery"), self.gallery)
-        layout.addLayout(form)
-        layout.addStretch()
+        columns = QWidget()
+        column_layout = QVBoxLayout(columns)
+        explanation = QLabel(tr('Choose which columns appear in the result list. File and removal selection always remain visible.'))
+        explanation.setWordWrap(True)
+        column_layout.addWidget(explanation)
+        grid = QGridLayout()
+        self.column_checks = {}
+        for index, (key, title) in enumerate(RESULT_COLUMNS):
+            check = QCheckBox(tr(title))
+            check.setChecked(key in preferences.visible_columns)
+            check.setEnabled(key not in REQUIRED_COLUMNS)
+            self.column_checks[key] = check
+            grid.addWidget(check, index // 2, index % 2)
+        column_layout.addLayout(grid)
+        self.restore_columns = QPushButton(tr('Show all columns'))
+        self.restore_columns.clicked.connect(self.show_all_columns)
+        column_layout.addWidget(self.restore_columns)
+        column_layout.addStretch()
+        self.tabs.addTab(columns, tr('Result columns'))
         controls = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         controls.accepted.connect(self.accept)
         controls.rejected.connect(self.reject)
         layout.addWidget(controls)
+
+    def show_all_columns(self):
+        for check in self.column_checks.values():
+            check.setChecked(True)
 
     def preferences(self):
         return replace(self.original, language=self.language.currentData(), theme=self.theme.currentData(),
                        two_folders=self.two_folders.isChecked(), recursive=self.recursive.isChecked(),
                        videos_only=self.videos_only.isChecked(), similar=self.similar.isChecked(),
                        video_profile=self.profile.currentData(), similarity=self.similarity.value(),
-                       coverage=self.coverage.value(), gallery_frames=self.gallery.currentData())
+                       coverage=self.coverage.value(), gallery_frames=self.gallery.currentData(),
+                       visible_columns=[key for key, check in self.column_checks.items() if check.isChecked()])

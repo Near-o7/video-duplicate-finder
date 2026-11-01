@@ -7,6 +7,7 @@ A local Windows desktop application for finding exact duplicate files and visual
 - Confirm exact duplicates with full-file SHA-256 hashes, regardless of file names.
 - Find possible video duplicates using a quick sample scan or a more sensitive full scan.
 - Review matches side by side and choose which copy to keep directly below each preview.
+- See matching file names and shared pair identifiers in the result list, with visible keep and removal choices.
 - Select extra copies in bulk while preserving references, or select every visible file.
 - Move selected files without overwriting existing files, or send duplicates to Recycle Bin after confirmation.
 - Browse additional frames horizontally and click a frame to open a larger view with keyboard navigation.
@@ -32,13 +33,17 @@ Place FFmpeg and FFprobe on PATH, or place their executables and required DLLs i
 
 1. Choose one folder, or a primary and secondary folder.
 2. Choose exact matching only or include similar videos, then start the scan.
-3. Use **Show files from** to switch between primary, secondary and both folders.
+3. When comparing two folders, use **Show files from** to switch between primary, secondary and both folders. One-folder scans only show filters relevant to that folder.
 4. Click a row to compare its matches. **Keep this copy** keeps that file unchecked and marks the other copy for removal. This does not delete anything.
 5. Review the selection and choose a move destination or Recycle Bin. The confirmation lists every affected file and the copy that will be kept.
 
 The first three gallery frames give an overview. Scroll horizontally or choose **More frames** to load additional moments. Click a frame to expand it, then use the arrow keys to navigate.
 
-Open **Settings > Preferences** to configure language, appearance, scan defaults and gallery size. Theme and language changes preserve the active comparison. Primary-folder unlocking is never stored as a default.
+Use **Hide comparison** and **Show comparison** beside the selection controls to collapse or restore the preview. The **Matches with** column names each file's matching copy. Exact groups use a shared G identifier, and visual pairs use a shared V identifier. Hover over the cell to see all matching paths and use the comparison selector to review additional matches. Visual pairs are direct matches, not groups of interchangeable files.
+
+Choosing a copy to keep clears its removal selection. If you later mark that reference for removal, earlier files that depended on it are kept and an explanatory notice appears. A previously reviewed visual keeper goes straight to the final confirmation. If all direct matches are selected for removal, the warning names the file and the matching paths that need a keeper.
+
+Open **Settings > Preferences** to configure language, appearance, scan defaults, gallery size and visible result columns. The **Result columns** tab lets you hide optional columns or restore all of them. File names and removal selection remain visible. Changes apply to existing results after saving and are remembered on the next launch. Theme and language changes preserve the active comparison. Primary-folder unlocking is never stored as a default.
 
 ## Understanding video matches
 
@@ -53,7 +58,7 @@ Similarity is a fingerprint score, not a probability that two files are intercha
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.2/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.2.1/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 

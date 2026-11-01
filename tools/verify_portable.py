@@ -4,8 +4,11 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from comparador import __version__
 
 
 def main():
@@ -21,7 +24,7 @@ def main():
     env["QT_QPA_PLATFORM"] = "windows" if args.native else "offscreen"
     for name in ("PYTHONHOME", "PYTHONPATH", "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH"):
         env.pop(name, None)
-    executable = ROOT / "dist" / "v1.2" / "VideoDuplicateFinder" / "VideoDuplicateFinder.exe"
+    executable = ROOT / "dist" / ("v" + __version__) / "VideoDuplicateFinder" / "VideoDuplicateFinder.exe"
     completed = subprocess.run([str(executable), "--self-test", str(report)], env=env, cwd=artifacts, timeout=180, capture_output=True)
     if not report.exists():
         raise RuntimeError(f"The executable did not produce a report. Exit code {completed.returncode}; {completed.stderr!r}")
