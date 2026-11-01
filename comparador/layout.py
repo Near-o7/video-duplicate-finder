@@ -200,6 +200,7 @@ def build_window(w):
     for col, (key, _) in enumerate(RESULT_COLUMNS):
         w.table.setColumnWidth(col, w.preferences.column_widths.get(key, DEFAULT_COLUMN_WIDTHS[key]))
     header.sectionClicked.connect(lambda col: w.toggle_all_visible() if col == 0 else None)
+    w.table.sortItems(1, Qt.SortOrder.AscendingOrder)
     w.table.itemSelectionChanged.connect(w.show_details)
     w.table.itemChanged.connect(w.update_actions)
     split.addWidget(w.table)

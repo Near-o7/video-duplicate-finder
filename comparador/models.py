@@ -118,7 +118,7 @@ class ScanResult:
             return 'Exact copy'
         if visual:
             return 'Possible duplicate'
-        if not self.exact_complete or (self.options.similar and (not self.video_complete or f.video_error)):
+        if not self.exact_complete or (self.options.similar and f.is_video and (not self.video_complete or f.video_error)):
             return 'Error or pending'
         return 'No matches detected'
 
@@ -128,8 +128,15 @@ class ScanResult:
             return 'Video read error'
         status = self.classification(key)
         if status == 'Error or pending' and not record.error:
+            if self.exact_complete and not self.cancelled and record.fingerprint:
+                return 'No matches (partial comparison)'
             return 'Comparison incomplete'
         return status
+
+    def comparison_note(self, key):
+        if self.display_status(key) == 'No matches (partial comparison)':
+            return tr('This video was analyzed and compared with the readable videos. Some videos could not be read and were excluded. This does not confirm absence from the whole collection.')
+        return ''
 
 def human_size(value):
     size = float(value)

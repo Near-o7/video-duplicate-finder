@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.2
+
+- Added signature-based FLV reading that tolerates inconsistent previous-tag sizes, including files with renamed extensions, across metadata, quick/full analysis and previews.
+- Distinguished completed video comparisons against readable files from actual read failures and unfinished analysis. Added report comparison notes and kept unrelated video failures from affecting non-video exact results.
+- Defaulted the table to filename sorting and prevented selection-header sorting from moving marked rows. Preview decisions now retain the active review row, scroll position and arrow navigation.
+
 ## 1.3.1
 
 - Added column-header guidance for dragging widths and double-clicking to fit contents.

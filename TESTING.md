@@ -32,6 +32,9 @@ python -m pytest -q
 - Adjustable dividers, alternate comparison placement and active review state survive row and preference changes.
 - Real header drag and double-click events resize columns without changing removal selection. Widths survive restart, language changes and hide/show operations.
 - Pending width saves flush on close, invalid widths are rejected, and preference resets apply on Save without changing column visibility.
+- Generated FLV with corrupted previous-tag sizes and a renamed extension is readable through metadata, quick/full analysis and previews without changing its bytes.
+- Readable videos with partial comparisons have notes instead of read errors, are excluded from the issues filter, and do not claim collection-wide absence. Non-video exact results are unaffected by video-only failures.
+- Both decision buttons on either preview preserve a middle table row and its scroll position under the default sort. The selection header retains bulk selection without sorting by changing decision labels.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 

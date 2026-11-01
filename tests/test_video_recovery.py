@@ -77,7 +77,7 @@ def test_failed_video_does_not_label_successful_file_as_read_error(roots, tmp_pa
     damaged = next(k for k, f in result.files.items() if f.relative == 'damaged.mp4')
     valid = next(k for k, f in result.files.items() if f.relative == 'valid.mp4')
     assert result.display_status(damaged) == 'Video read error'
-    assert result.display_status(valid) == 'Comparison incomplete'
+    assert result.display_status(valid) == 'No matches (partial comparison)'
     assert not result.files[valid].video_error
     assert result.classification(valid) == 'Error or pending'
     from comparador.ui import MainWindow
@@ -86,8 +86,11 @@ def test_failed_video_does_not_label_successful_file_as_read_error(roots, tmp_pa
     qtbot.addWidget(window)
     window.scan_done(result)
     statuses = {window.table.item(row, 7).text() for row in range(window.table.rowCount())}
-    assert statuses == {'Error al leer el video', 'Comparación incompleta'}
+    assert statuses == {'Error al leer el video', 'Sin coincidencias (parcial)'}
     assert {row[2] for row in report_rows(result)} == statuses
+    assert result.comparison_note(valid)
+    window.view_filter.setCurrentIndex(window.view_filter.findData(7))
+    assert window.visible_keys() == [damaged]
     qtbot.waitUntil(lambda: not window.jobs, timeout=5000)
 
 
