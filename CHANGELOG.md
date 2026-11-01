@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.6
+
+- Added an optional quick segment profile with direct seeks to at most 160 captures. It bounds pair-comparison work and estimates shared ranges while keeping the full segment profile available.
+- Reused dense fingerprints when available, cached quick segment fingerprints separately, and bounded alternative-reader recovery without silently starting a full decode.
+- Added English and Spanish controls, persisted defaults, estimated-coverage notes in previews and reports, and manual-only review for partial video matches.
+
 ## 1.3.5
 
 - Added an optional edited-video segment profile that aligns ordered shared runs independently across internal cuts and inserted scenes. It reuses full-profile fingerprints and allows 10% to 100% coverage of the longer video without counting samples twice.

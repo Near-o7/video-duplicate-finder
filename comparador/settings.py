@@ -36,11 +36,11 @@ class Preferences:
     def validate(self):
         if self.language not in ("system", "es", "en") or self.theme not in ("system", "light", "dark"):
             raise ValueError("Invalid language or theme")
-        if self.video_profile not in ("fast", "full", "segments"):
+        if self.video_profile not in ("fast", "full", "segments", "segments_fast"):
             raise ValueError("Invalid video profile")
         if self.comparison_position not in ('right', 'below'):
             raise ValueError('Invalid comparison position')
-        minimum_coverage = 10 if self.video_profile == 'segments' else 50
+        minimum_coverage = 10 if self.video_profile in ('segments', 'segments_fast') else 50
         if not MIN_SIMILARITY <= self.similarity <= MAX_SIMILARITY or not minimum_coverage <= self.coverage <= 100 or self.gallery_frames not in (12, 24):
             raise ValueError("Invalid preference value")
         for field in ("two_folders", "recursive", "videos_only", "similar"):

@@ -7,7 +7,7 @@ import os
 import threading
 from .cache import Cache
 from .models import Cancelled, FileRecord, ScanOptions, ScanResult, VIDEO_EXTENSIONS
-from .video import cancel_check, probe, fingerprint, fast_fingerprint, find_similar
+from .video import cancel_check, probe, fingerprint, fast_fingerprint, fast_segment_fingerprint, sparse_segment_fingerprint, find_similar
 
 def hash_file(path, cancel=None):
     digest = hashlib.sha256()
@@ -113,14 +113,19 @@ def scan(options: ScanOptions, cancel=None, progress=None, cache_path=None):
                 if 'video_stream_index' not in record.metadata:
                     record.metadata = probe(record.path, cancel)
                 if options.similar:
-                    cache_key = 'fingerprint_fast_v3' if options.video_profile == 'fast' else 'fingerprint_full_v3'
+                    cache_key = {'fast': 'fingerprint_fast_v3', 'segments_fast': 'fingerprint_segments_fast_v1'}.get(options.video_profile, 'fingerprint_full_v3')
                     record.fingerprint = payload.get(cache_key) or shared.get(cache_key)
+                    if not record.fingerprint and options.video_profile == 'segments_fast':
+                        dense = payload.get('fingerprint_full_v3') or shared.get('fingerprint_full_v3')
+                        if dense:
+                            record.fingerprint = sparse_segment_fingerprint(dense, record.metadata)
                     if not record.fingerprint:
-                        if options.video_profile == 'fast':
+                        if options.video_profile in ('fast', 'segments_fast'):
 
                             def sample_progress(current, total):
                                 progress(tr('Video sample {p0}/{p1}, file {p2}/{p3}', p0=f'{current}', p1=f'{total}', p2=f'{i + 1}', p3=f'{len(videos)}'), i + 1, len(videos), record.path)
-                            record.fingerprint = fast_fingerprint(record.path, record.metadata, cancel, sample_progress)
+                            reader = fast_segment_fingerprint if options.video_profile == 'segments_fast' else fast_fingerprint
+                            record.fingerprint = reader(record.path, record.metadata, cancel, sample_progress)
                         else:
                             record.fingerprint = fingerprint(record.path, record.metadata, cancel)
                 if not record.unchanged():

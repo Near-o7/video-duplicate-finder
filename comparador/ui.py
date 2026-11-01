@@ -416,8 +416,10 @@ class MainWindow(QMainWindow):
         else:
             text = tr('Reviewing secondary files. Select extra copies to move or send to Recycle Bin. Primary copies are kept.') if result.options.secondary else tr('Select extra copies to mark duplicates while keeping a reference in each group.')
         if result.options.similar:
-            if result.options.video_profile == 'segments':
+            if result.options.video_profile in ('segments', 'segments_fast'):
                 text += tr(' Segment matching allows internal cuts and counts shared content against the longer video.')
+                if result.options.video_profile == 'segments_fast':
+                    text += ' ' + tr('Quick segment coverage and ranges are estimated from at most 160 captures. Unmatched sections may be missed.')
             else:
                 text += tr(' Quick scan estimates coverage from samples.') if result.options.video_profile == 'fast' else tr(' Full scan examines the video timeline.')
         self.notice.setText(text)
@@ -433,7 +435,9 @@ class MainWindow(QMainWindow):
         result = self.result
         similarity, coverage = (self.similarity.value(), self.coverage.value())
         profile = self.video_profile.currentData()
-        if (profile == 'fast') != (result.options.video_profile == 'fast'):
+        family = lambda value: 'dense' if value in ('full', 'segments') else value
+        source = result.options.video_profile
+        if family(profile) != family(source) and not (profile == 'segments_fast' and family(source) == 'dense'):
             self.notice.setText(tr('The sampling profile changed. Start a new scan to apply it. Existing cached frames will be reused when available.'))
             self.notice.show()
             return
@@ -732,7 +736,7 @@ class MainWindow(QMainWindow):
             if match.a != f.key:
                 spans = [[s[2], s[3], s[0], s[1]] for s in spans]
             self.evidence.setText(tr('Visual similarity {p0}%. {p1}Coverage {p2}% of the longer video. ', p0=f'{match.similarity:.1f}', p1=f"{(tr('estimated ') if match.estimated else '')}", p2=f'{match.coverage:.1f}') + tr('Segments: ') + '. '.join((f'{duration_text(s[0])}–{duration_text(s[1])} ↔ {duration_text(s[2])}–{duration_text(s[3])}' for s in spans[:4])) + tr('. Audio was not compared.'))
-            if self.result.options.video_profile == 'segments':
+            if self.result.options.video_profile in ('segments', 'segments_fast'):
                 self.evidence.setText(self.evidence.text() + ' ' + tr('These videos share sections and may contain different content. Review both before selecting a file for removal.'))
             span = max(spans, key=lambda s: s[1] - s[0], default=[0,f.metadata.get('duration',0),0,peer.metadata.get('duration',0)])
             times = [[span[0] + (span[1] - span[0]) * q for q in (0.15, 0.5, 0.85)], [span[2] + (span[3] - span[2]) * q for q in (0.15, 0.5, 0.85)]]

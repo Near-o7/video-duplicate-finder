@@ -16,7 +16,7 @@ def redundant_keys(result, visible, allow_primary=False):
         selected.update(k for k in group if k in eligible and k != reference)
     # A segment match may share only a small portion of the longer video.
     # It does not establish a redundant copy for automatic bulk proposals.
-    if result.options.video_profile == 'segments':
+    if result.options.video_profile in ('segments', 'segments_fast'):
         return selected
     for match in result.similar_matches:
         a, b = match.a, match.b

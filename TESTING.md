@@ -42,6 +42,9 @@ python -m pytest -q
 - Segment coverage counts each timeline sample once. Shared intros, reversed sequences, uniform frames, repeated stills and isolated captures are rejected when they do not meet the criteria. Loose thresholds require cumulative sequence evidence to reduce accidental matches.
 - Segment defaults and the profile-specific 10% coverage minimum persist. Full fingerprints are reused across scans and the Apply action, while sparse quick samples require a new scan before segment matching.
 - Shared sections have an explicit result label. Bulk extra-copy proposals exclude segment candidates while still selecting redundant exact copies.
+- Quick segment sampling is bounded to 160 captures across the timeline. Real direct-seek and fallback readers detect a generated video with two internal cuts, and exports label coverage and ranges as estimates.
+- Different sampling intervals align on a common coarser grid without double counting. Unrelated content, short intros, reversed sequences, black frames and stills are rejected. Ordinary quick fingerprints are not accepted as segment evidence.
+- Quick segment defaults and the 10% coverage minimum persist. Dense fingerprints can be downsampled without mutation or decoding, separate caches are reused, switching back to dense sampling requires a rescan, and cancellation never starts recovery. An expired shared reader budget never starts more FFmpeg processes.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 
@@ -59,10 +62,12 @@ Generated captures are local artifacts and must not be committed. They may conta
 
 ## Portable package
 
-`build.py` runs an integration test against the actual executable with PATH restricted to Windows System32. It verifies bundled multimedia tools, exact and visual matching, report export, GUI construction and sending a generated temporary file to Recycle Bin. `tools/verify_portable.py --native` also loads the native Windows graphical backend.
+`build.py` runs an integration test against the actual executable with PATH restricted to Windows System32. It verifies bundled multimedia tools, exact and visual matching, quick segment matching of an internally cut video, report export, GUI construction and sending a generated temporary file to Recycle Bin. `tools/verify_portable.py --native` also loads the native Windows graphical backend.
 
 ## Performance context
 
 A generated H.264 MP4 lasting 28 minutes and 2 seconds at 1280 by 720 was used to compare extraction strategies. One local run used 14 quick samples in about 0.20 seconds, compared with 1,682 full samples in about 20.77 seconds. This is not a measurement of a real user video or a performance guarantee. The test has a short regular GOP and repeated synthetic content. Other codecs, GOP structures, drives and workloads can differ substantially.
 
 Use `tools/benchmark_video.py` to repeat this synthetic extraction benchmark. Quick mode trades recall for speed. Full mode remains available for a more sensitive comparison.
+
+For version 1.3.6, another local run on that generated 28:02 video took 1.32 seconds to extract 106 quick segment captures, compared with 22.26 seconds for 1,682 full captures. This measures extraction only, without a collection-wide pair comparison, and does not predict performance or recall on real user videos.
