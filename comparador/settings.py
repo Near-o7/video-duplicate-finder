@@ -1,0 +1,55 @@
+"""Preferences contain defaults only. File paths and selections are never saved."""
+from dataclasses import dataclass, asdict, fields
+from pathlib import Path
+import json
+import os
+
+from .cache import data_dir
+
+
+@dataclass
+class Preferences:
+    language: str = "system"
+    theme: str = "system"
+    two_folders: bool = False
+    recursive: bool = True
+    videos_only: bool = False
+    similar: bool = False
+    video_profile: str = "fast"
+    similarity: int = 90
+    coverage: int = 80
+    gallery_frames: int = 12
+
+    def validate(self):
+        if self.language not in ("system", "es", "en") or self.theme not in ("system", "light", "dark"):
+            raise ValueError("Invalid language or theme")
+        if self.video_profile not in ("fast", "full"):
+            raise ValueError("Invalid video profile")
+        if not 70 <= self.similarity <= 99 or not 50 <= self.coverage <= 100 or self.gallery_frames not in (12, 24):
+            raise ValueError("Invalid preference value")
+        for field in ("two_folders", "recursive", "videos_only", "similar"):
+            if type(getattr(self, field)) is not bool:
+                raise ValueError("Invalid boolean preference")
+
+
+def load_preferences(path=None):
+    try:
+        payload = json.loads(Path(path or data_dir() / "settings.json").read_text(encoding="utf-8"))
+        allowed = {f.name for f in fields(Preferences)}
+        result = Preferences(**{k: v for k, v in payload.items() if k in allowed})
+        result.validate()
+        return result
+    except (OSError, ValueError, TypeError, AttributeError):
+        return Preferences()
+
+
+def save_preferences(preferences, path=None):
+    preferences.validate()
+    target = Path(path or data_dir() / "settings.json")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp = target.with_suffix(".tmp")
+    try:
+        temp.write_text(json.dumps(asdict(preferences), indent=2), encoding="utf-8")
+        os.replace(temp, target)
+    finally:
+        temp.unlink(missing_ok=True)

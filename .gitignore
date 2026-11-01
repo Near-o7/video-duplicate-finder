@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+build/
+dist/
+artifacts/
+*.pyc
+*.log
+*.sqlite3*
+settings.json
+.env*
+*.zip
+*.mp4
+*.mkv
+LEEME.txt
+VALIDACION.md
+__pycache__/

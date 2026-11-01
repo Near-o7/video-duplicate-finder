@@ -1,0 +1,32 @@
+name: Windows tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Make FFmpeg available
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg --yes --no-progress
+            $ffmpegPath = Get-ChildItem C:\ProgramData\chocolatey\lib\ffmpeg -Filter ffmpeg.exe -Recurse | Select-Object -First 1 -ExpandProperty DirectoryName
+            $ffmpegPath | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          }
+      - name: Check public source
+        run: python tools/audit_public.py
+      - name: Run tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
