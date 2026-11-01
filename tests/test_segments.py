@@ -13,6 +13,7 @@ from comparador.preferences_dialog import PreferencesDialog
 from comparador.reports import export_csv, export_html
 from comparador.segments import compare_segments
 from comparador.settings import Preferences, load_preferences, save_preferences
+from comparador.selection import redundant_keys
 from comparador.ui import MainWindow
 from comparador.video import binary, compare_pair, find_similar
 
@@ -88,6 +89,17 @@ def test_loose_threshold_still_requires_sequence_evidence(tmp_path):
     edited = record(tmp_path, 'edited.mp4', [h ^ ((1 << 20) - 1) for h in source[:100] + source[150:250]])
     match = compare_segments(a, edited, 50, 50, None)
     assert match and match.coverage >= 60
+
+
+def test_partial_sections_are_labeled_and_not_proposed_as_extra_copies(tmp_path):
+    a, b = edited_pair(tmp_path)
+    options = ScanOptions(tmp_path, similar=True, video_profile='segments', coverage=70)
+    match = compare_segments(a, b, 90, 70, None)
+    result = ScanResult(options, files={a.key: a, b.key: b}, similar_matches=[match])
+    assert result.display_status(a.key) == 'Shared video sections'
+    assert redundant_keys(result, result.files) == set()
+    result.exact_groups = [[a.key, b.key]]
+    assert len(redundant_keys(result, result.files)) == 1
 
 
 def test_sparse_or_isolated_captures_do_not_form_segments(tmp_path):

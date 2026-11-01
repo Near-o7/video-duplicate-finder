@@ -157,6 +157,8 @@ class ScanResult:
         if record.active and record.video_error and not record.error:
             return 'Video read error'
         status = self.classification(key)
+        if status == 'Possible duplicate' and self.options.video_profile == 'segments':
+            return 'Shared video sections'
         if status == 'Error or pending' and not record.error:
             if self.exact_complete and not self.cancelled and record.fingerprint:
                 return 'No matches (partial comparison)'

@@ -307,6 +307,8 @@
   "Below the table": "Debajo de la tabla",
   "This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.": "Este archivo se leyó, pero otros errores impiden completar la comparación. Revisa Incidencias. No se confirma que falte una copia.",
   "Edited videos by segments": "Videos editados por tramos",
+  "Shared video sections": "Tramos de video compartidos",
+  "These videos share sections and may contain different content. Review both before selecting a file for removal.": "Estos videos comparten tramos y pueden tener contenido diferente. Revisa ambos antes de marcar un archivo para retirar.",
   "Finds shared sequences despite internal cuts. Uses full sampling. Coverage refers to the longer video and can be lowered to 10%. Effects may reduce visual similarity. The first scan takes longer, then cached frames are reused.": "Busca secuencias compartidas aunque haya cortes internos. Usa muestreo completo. La cobertura se calcula sobre el video más largo y puede bajarse hasta el 10 %. Los efectos pueden reducir la similitud visual. El primer análisis tarda más, después se reutilizan las capturas guardadas.",
   " Segment matching allows internal cuts and counts shared content against the longer video.": " La comparación por tramos permite cortes internos y calcula el contenido compartido sobre el video más largo.",
   "Segment matching allows internal cuts and counts shared content against the longer video.": "La comparación por tramos permite cortes internos y calcula el contenido compartido sobre el video más largo.",

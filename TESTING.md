@@ -41,6 +41,7 @@ python -m pytest -q
 - Segment matching detects independently aligned runs across internal cuts and inserted scenes, including a generated re-encoded video with mild color effects. Both timeline orientations are checked.
 - Segment coverage counts each timeline sample once. Shared intros, reversed sequences, uniform frames, repeated stills and isolated captures are rejected when they do not meet the criteria. Loose thresholds require cumulative sequence evidence to reduce accidental matches.
 - Segment defaults and the profile-specific 10% coverage minimum persist. Full fingerprints are reused across scans and the Apply action, while sparse quick samples require a new scan before segment matching.
+- Shared sections have an explicit result label. Bulk extra-copy proposals exclude segment candidates while still selecting redundant exact copies.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 

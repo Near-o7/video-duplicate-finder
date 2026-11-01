@@ -732,6 +732,8 @@ class MainWindow(QMainWindow):
             if match.a != f.key:
                 spans = [[s[2], s[3], s[0], s[1]] for s in spans]
             self.evidence.setText(tr('Visual similarity {p0}%. {p1}Coverage {p2}% of the longer video. ', p0=f'{match.similarity:.1f}', p1=f"{(tr('estimated ') if match.estimated else '')}", p2=f'{match.coverage:.1f}') + tr('Segments: ') + '. '.join((f'{duration_text(s[0])}–{duration_text(s[1])} ↔ {duration_text(s[2])}–{duration_text(s[3])}' for s in spans[:4])) + tr('. Audio was not compared.'))
+            if self.result.options.video_profile == 'segments':
+                self.evidence.setText(self.evidence.text() + ' ' + tr('These videos share sections and may contain different content. Review both before selecting a file for removal.'))
             span = max(spans, key=lambda s: s[1] - s[0], default=[0,f.metadata.get('duration',0),0,peer.metadata.get('duration',0)])
             times = [[span[0] + (span[1] - span[0]) * q for q in (0.15, 0.5, 0.85)], [span[2] + (span[3] - span[2]) * q for q in (0.15, 0.5, 0.85)]]
         else:
