@@ -79,6 +79,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.preferences = load_preferences()
+        self.column_width_timer = QTimer(self)
+        self.column_width_timer.setSingleShot(True)
+        self.column_width_timer.setInterval(400)
+        self.column_width_timer.timeout.connect(self.persist_column_widths)
         set_language(self.preferences.language)
         for filename in ('segoeui.ttf', 'segoeuib.ttf', 'seguisb.ttf'):
             font = Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts' / filename
@@ -117,6 +121,8 @@ class MainWindow(QMainWindow):
         self.comparison_sized = False
         build_window(self)
         self.apply_result_columns()
+        self.table.horizontalHeader().sectionResized.connect(
+            lambda index, previous, width, table=self.table: self.column_width_changed(table, index, width))
         self.menuBar().clear()
         menu = self.menuBar().addMenu(tr('Settings'))
         self.settings_action = menu.addAction(tr('Preferences...'))
@@ -134,6 +140,20 @@ class MainWindow(QMainWindow):
     def apply_result_columns(self):
         for index, (key, _) in enumerate(RESULT_COLUMNS):
             self.table.setColumnHidden(index, key not in self.preferences.visible_columns)
+
+    def column_width_changed(self, table, index, width):
+        if table is not self.table or table.isColumnHidden(index) or not 48 <= width <= 2400:
+            return
+        self.preferences.column_widths[RESULT_COLUMNS[index][0]] = width
+        self.column_width_timer.start()
+
+    def persist_column_widths(self):
+        self.column_width_timer.stop()
+        try:
+            save_preferences(self.preferences)
+        except (OSError, ValueError) as exc:
+            self.notice.setText(tr('Column widths could not be saved: {error}', error=str(exc)))
+            self.notice.show()
 
     def apply_defaults(self):
         p = self.preferences
@@ -1071,6 +1091,8 @@ class MainWindow(QMainWindow):
             event.ignore()
             QTimer.singleShot(200, self.close)
         else:
+            if self.column_width_timer.isActive():
+                self.persist_column_widths()
             event.accept()
 
 def run():

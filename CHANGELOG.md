@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1
+
+- Added column-header guidance for dragging widths and double-clicking to fit contents.
+- Saved column widths automatically, retained them across restarts, language changes and column visibility changes, and flushed pending saves when closing.
+- Added a Save-confirmed width reset in preferences without changing visible columns or the active review.
+
 ## 1.3.0
 
 - Moved comparison previews to an adjustable side panel by default, with the below-table position available in preferences.
