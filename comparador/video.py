@@ -254,7 +254,14 @@ def compare_pair(a, b, similarity, coverage, cancel):
                 best = match
     return best
 
-def find_similar(records, similarity, coverage, cancel, progress=None):
+def find_similar(records, similarity, coverage, cancel, progress=None, mode='full'):
+    if mode not in ('fast', 'full', 'segments'):
+        raise ValueError(tr('Unknown video profile.'))
+    if mode == 'segments':
+        from .segments import compare_segments
+        compare = compare_segments
+    else:
+        compare = compare_pair
     eligible = [f for f in records if f.active and f.fingerprint and (not f.error) and (not f.video_error)]
     eligible.sort(key=lambda f: f.metadata['duration'])
     durations = [f.metadata['duration'] for f in eligible]
@@ -288,7 +295,7 @@ def find_similar(records, similarity, coverage, cancel, progress=None):
             progress(tr('Comparing videos'), n + 1, len(candidates), a.path)
         if a.digest and a.digest == b.digest:
             continue
-        match = compare_pair(a, b, similarity, coverage, cancel)
+        match = compare(a, b, similarity, coverage, cancel)
         if match:
             matches.append(match)
     return matches

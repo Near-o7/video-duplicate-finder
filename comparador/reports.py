@@ -34,6 +34,8 @@ def export_csv(result, path):
         writer.writerow(["Video Duplicate Finder", datetime.datetime.fromtimestamp(result.created).isoformat(timespec="seconds")])
         writer.writerow([tr("Primary"),str(result.options.primary),tr("Secondary"),str(result.options.secondary or "")])
         writer.writerow([tr("Profile"),result.options.video_profile,tr("Minimum visual similarity"),result.options.similarity,tr("Minimum content coverage"),result.options.coverage])
+        if result.options.video_profile == 'segments':
+            writer.writerow([tr('Segment matching allows internal cuts and counts shared content against the longer video.')])
         writer.writerow([tr("Complete scan"),result.exact_complete and (not result.options.similar or result.video_complete),tr("Canceled"),result.cancelled])
         for error in result.errors:
             writer.writerow([tr("Error"),csv_safe(error)])
@@ -50,6 +52,7 @@ def export_html(result,path):
 <h1>Video Duplicate Finder</h1><p><b>{esc(tr('Primary'))}:</b> {esc(result.options.primary)}<br><b>{esc(tr('Secondary'))}:</b> {esc(result.options.secondary or tr('No secondary folder'))}</p>
 <p>{esc(tr('Profile'))}: {esc(result.options.video_profile)}. {esc(tr('Minimum visual similarity'))}: {result.options.similarity}%. {esc(tr('Minimum content coverage'))}: {result.options.coverage}%.</p>
 <p>{esc(tr('Canceled'))}: {result.cancelled}. {esc(tr('Complete scan'))}: {result.exact_complete and (not result.options.similar or result.video_complete)}.</p>
-<p>{esc(tr('Coverage is estimated from samples in quick mode. Audio is not compared.'))}</p><ul>{errors}</ul>
+<p>{esc(tr('Coverage is estimated from samples in quick mode. Audio is not compared.'))}</p>
+<p>{esc(tr('Segment matching allows internal cuts and counts shared content against the longer video.')) if result.options.video_profile == 'segments' else ''}</p><ul>{errors}</ul>
 <table><thead><tr>{''.join(f'<th>{esc(tr(h))}</th>' for h in HEADERS)}</tr></thead><tbody>{rows}</tbody></table></html>'''
     Path(path).write_text(text,encoding="utf-8")

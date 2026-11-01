@@ -305,5 +305,10 @@
   "Comparison position": "Posición de la comparación",
   "To the right of the table": "A la derecha de la tabla",
   "Below the table": "Debajo de la tabla",
-  "This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.": "Este archivo se leyó, pero otros errores impiden completar la comparación. Revisa Incidencias. No se confirma que falte una copia."
+  "This file was read, but other errors prevent completing the comparison. Review Issues. No absence is confirmed.": "Este archivo se leyó, pero otros errores impiden completar la comparación. Revisa Incidencias. No se confirma que falte una copia.",
+  "Edited videos by segments": "Videos editados por tramos",
+  "Finds shared sequences despite internal cuts. Uses full sampling. Coverage refers to the longer video and can be lowered to 10%. Effects may reduce visual similarity. The first scan takes longer, then cached frames are reused.": "Busca secuencias compartidas aunque haya cortes internos. Usa muestreo completo. La cobertura se calcula sobre el video más largo y puede bajarse hasta el 10 %. Los efectos pueden reducir la similitud visual. El primer análisis tarda más, después se reutilizan las capturas guardadas.",
+  " Segment matching allows internal cuts and counts shared content against the longer video.": " La comparación por tramos permite cortes internos y calcula el contenido compartido sobre el video más largo.",
+  "Segment matching allows internal cuts and counts shared content against the longer video.": "La comparación por tramos permite cortes internos y calcula el contenido compartido sobre el video más largo.",
+  "The sampling profile changed. Start a new scan to apply it. Existing cached frames will be reused when available.": "Cambió el perfil de muestreo. Inicia un nuevo análisis para aplicarlo. Se reutilizarán las capturas guardadas que estén disponibles."
 }

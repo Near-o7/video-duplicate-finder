@@ -34,9 +34,10 @@ class ScanOptions:
                 raise ValueError(tr('Choose a valid secondary folder.'))
             if self.primary == self.secondary or self.primary in self.secondary.parents or self.secondary in self.primary.parents:
                 raise ValueError(tr('Choose different folders. Neither folder can be inside the other.'))
-        if not MIN_SIMILARITY <= self.similarity <= MAX_SIMILARITY or not 50 <= self.coverage <= 100:
+        minimum_coverage = 10 if self.video_profile == 'segments' else 50
+        if not MIN_SIMILARITY <= self.similarity <= MAX_SIMILARITY or not minimum_coverage <= self.coverage <= 100:
             raise ValueError(tr('Thresholds are outside the allowed range.'))
-        if self.video_profile not in ('fast', 'full'):
+        if self.video_profile not in ('fast', 'full', 'segments'):
             raise ValueError(tr('Unknown video profile.'))
 
 @dataclass

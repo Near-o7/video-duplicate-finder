@@ -134,7 +134,7 @@ def scan(options: ScanOptions, cancel=None, progress=None, cache_path=None):
             except (OSError, RuntimeError, ValueError, EOFError) as exc:
                 record.video_error = str(exc)
         if options.similar:
-            result.similar_matches = find_similar(list(result.files.values()), options.similarity, options.coverage, cancel, progress)
+            result.similar_matches = find_similar(list(result.files.values()), options.similarity, options.coverage, cancel, progress, mode=options.video_profile)
         result.video_complete = not any((f.video_error for f in videos))
         for record in result.files.values():
             if not record.error and (not record.unchanged()):

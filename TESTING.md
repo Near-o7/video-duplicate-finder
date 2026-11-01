@@ -38,6 +38,9 @@ python -m pytest -q
 - Secondary no-match results remain available despite failed secondary videos and removed primary images of different sizes. Same-size unreadable primary files, primary video failures, cancelled work and unfinished comparisons remain uncertain.
 - Secondary-only result filters and exported notes reflect the relevant reference scope. A stable rescan separates persistent secondary read errors from valid new files.
 - Similarity settings from 50% to 69% persist and are accepted by both GUI controls and scan validation. Lowering a threshold can expose a candidate below 70% without decoding again.
+- Segment matching detects independently aligned runs across internal cuts and inserted scenes, including a generated re-encoded video with mild color effects. Both timeline orientations are checked.
+- Segment coverage counts each timeline sample once. Shared intros, reversed sequences, uniform frames, repeated stills and isolated captures are rejected when they do not meet the criteria. Loose thresholds require cumulative sequence evidence to reduce accidental matches.
+- Segment defaults and the profile-specific 10% coverage minimum persist. Full fingerprints are reused across scans and the Apply action, while sparse quick samples require a new scan before segment matching.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 

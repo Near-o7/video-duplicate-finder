@@ -171,7 +171,7 @@ class MainWindow(QMainWindow):
         self.recursive.setChecked(p.recursive)
         self.file_filter.setCurrentIndex(int(p.videos_only))
         self.analysis_mode.setCurrentIndex(int(p.similar))
-        self.video_profile.setCurrentIndex(0 if p.video_profile == 'fast' else 1)
+        self.video_profile.setCurrentIndex(self.video_profile.findData(p.video_profile))
         self.similarity.setValue(p.similarity)
         self.coverage.setValue(p.coverage)
 
@@ -326,8 +326,8 @@ class MainWindow(QMainWindow):
         if self.folder_mode.currentIndex() == 1 and (not self.secondary_path.text().strip()):
             raise ValueError(tr('Choose a secondary folder.'))
         options = ScanOptions(Path(self.primary_path.text().strip()), Path(self.secondary_path.text().strip()) if self.folder_mode.currentIndex() else None, self.recursive.isChecked(), bool(self.file_filter.currentIndex()), bool(self.analysis_mode.currentIndex()), self.similarity.value(), self.coverage.value())
+        options.video_profile = self.video_profile.currentData()
         options.validate()
-        options.video_profile = 'fast' if self.video_profile.currentIndex() == 0 else 'full'
         return options
 
     def start_job(self, fn, completed):
@@ -416,7 +416,10 @@ class MainWindow(QMainWindow):
         else:
             text = tr('Reviewing secondary files. Select extra copies to move or send to Recycle Bin. Primary copies are kept.') if result.options.secondary else tr('Select extra copies to mark duplicates while keeping a reference in each group.')
         if result.options.similar:
-            text += tr(' Quick scan estimates coverage from samples.') if result.options.video_profile == 'fast' else tr(' Full scan examines the video timeline.')
+            if result.options.video_profile == 'segments':
+                text += tr(' Segment matching allows internal cuts and counts shared content against the longer video.')
+            else:
+                text += tr(' Quick scan estimates coverage from samples.') if result.options.video_profile == 'fast' else tr(' Full scan examines the video timeline.')
         self.notice.setText(text)
         self.notice.setVisible(result.cancelled)
         self.scan_details_button.setToolTip(text)
@@ -429,14 +432,20 @@ class MainWindow(QMainWindow):
             return
         result = self.result
         similarity, coverage = (self.similarity.value(), self.coverage.value())
+        profile = self.video_profile.currentData()
+        if (profile == 'fast') != (result.options.video_profile == 'fast'):
+            self.notice.setText(tr('The sampling profile changed. Start a new scan to apply it. Existing cached frames will be reused when available.'))
+            self.notice.show()
+            return
 
         def calculate(cancel, progress):
-            matches = find_similar(list(result.files.values()), similarity, coverage, cancel, progress)
+            matches = find_similar(list(result.files.values()), similarity, coverage, cancel, progress, mode=profile)
             return matches
 
         def done(matches):
             result.options.similarity = similarity
             result.options.coverage = coverage
+            result.options.video_profile = profile
             result.similar_matches = matches
             self.scan_done(result)
         self.notice.setText(tr('Applying thresholds to existing fingerprints without decoding the videos again.'))
