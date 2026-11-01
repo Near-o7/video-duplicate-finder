@@ -59,6 +59,8 @@ If the quick decoder fails, an alternative FFmpeg reader retries the same sample
 
 **Video read error** identifies a video that could not be read. **No matches (partial comparison)** means that the video was analyzed and compared with readable videos, while other videos were excluded by read failures. **Comparison incomplete** covers work that remains unfinished. None of these states confirms absence from the whole collection. Only failed or unfinished files appear in the issues filter. Non-video files retain their exact-comparison status when video decoding fails elsewhere. Exported reports include a separate **Comparison notes** column for explanations, keeping actual errors in the error column.
 
+When comparing two folders, secondary no-match results depend on the primary reference files. Read errors in other secondary videos do not make a readable secondary file's comparison incomplete. Confirmed missing non-video files of a different recorded size do not prevent completed video comparisons either. Modified or unreadable primary files, missing primary files of the same size, failed primary videos, unknown directory contents and interrupted scans remain uncertain. File-action safeguards still require a stable, completed exact scan, so rerun the scan after files stop changing before moving selections.
+
 FLV inputs are identified by their file signature, including files renamed with another extension. Readers tolerate inconsistent previous-tag size fields using FFmpeg's documented FLV option, without modifying or converting the original files. Existing successful fingerprints remain cached, and failed videos are retried on the next scan.
 
 Similarity is a fingerprint score, not a probability that two files are interchangeable. Strong crops, watermarks, speed changes and extensive edits may not match. Lowering a threshold reuses existing fingerprints without decoding again. Quick and full fingerprints are cached separately.
@@ -70,7 +72,7 @@ Similarity is a fingerprint score, not a probability that two files are intercha
 .\.venv\Scripts\python.exe tools/verify_portable.py --native
 ```
 
-The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.2/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
+The build includes the application, Python runtime, Qt, PyAV, FFmpeg and FFprobe in a portable folder under `dist/v1.3.3/`. Extract the entire ZIP and run `VideoDuplicateFinder.exe` while keeping `_internal` beside it. The package is checked with a restricted PATH before the ZIP is created.
 
 This repository contains source and synthetic tests only. Local executable packages, media samples, screenshots, reports, caches and preferences are excluded from Git. Dependency notices are described in [THIRD_PARTY.md](THIRD_PARTY.md).
 
