@@ -2,6 +2,7 @@ from dataclasses import replace
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QComboBox, QCheckBox, QSpinBox, QLabel, QDialogButtonBox, QTabWidget, QWidget, QPushButton, QGridLayout, QScrollArea
 from .i18n import tr
 from .settings import RESULT_COLUMNS, REQUIRED_COLUMNS
+from .limits import MIN_SIMILARITY, MAX_SIMILARITY
 
 
 class PreferencesDialog(QDialog):
@@ -64,7 +65,7 @@ class PreferencesDialog(QDialog):
         self.profile.setCurrentIndex(self.profile.findData(preferences.video_profile))
         form.addRow(tr("Default video profile"), self.profile)
         self.similarity = QSpinBox()
-        self.similarity.setRange(70, 99)
+        self.similarity.setRange(MIN_SIMILARITY, MAX_SIMILARITY)
         self.similarity.setSuffix(" %")
         self.similarity.setValue(preferences.similarity)
         form.addRow(tr("Minimum visual similarity"), self.similarity)

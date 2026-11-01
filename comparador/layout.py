@@ -5,6 +5,7 @@ from PySide6.QtWidgets import *
 from .appearance import icon
 from . import __version__
 from .settings import RESULT_COLUMNS, DEFAULT_COLUMN_WIDTHS
+from .limits import MIN_SIMILARITY, MAX_SIMILARITY
 
 def build_window(w):
     from .ui import label, button, PreviewCard
@@ -89,7 +90,7 @@ def build_window(w):
     thresholds.setContentsMargins(0, 0, 0, 0)
     thresholds.addWidget(label(tr('Similarity')))
     w.similarity = QSpinBox()
-    w.similarity.setRange(70, 99)
+    w.similarity.setRange(MIN_SIMILARITY, MAX_SIMILARITY)
     w.similarity.setValue(90)
     w.similarity.setSuffix(' %')
     thresholds.addWidget(w.similarity)

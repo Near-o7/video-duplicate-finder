@@ -37,6 +37,7 @@ python -m pytest -q
 - Both decision buttons on either preview preserve a middle table row and its scroll position under the default sort. The selection header retains bulk selection without sorting by changing decision labels.
 - Secondary no-match results remain available despite failed secondary videos and removed primary images of different sizes. Same-size unreadable primary files, primary video failures, cancelled work and unfinished comparisons remain uncertain.
 - Secondary-only result filters and exported notes reflect the relevant reference scope. A stable rescan separates persistent secondary read errors from valid new files.
+- Similarity settings from 50% to 69% persist and are accepted by both GUI controls and scan validation. Lowering a threshold can expose a candidate below 70% without decoding again.
 
 Creating symbolic links may be skipped when the Windows account lacks the required permission. All media fixtures are generated for the tests.
 
