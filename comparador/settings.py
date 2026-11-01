@@ -5,6 +5,7 @@ import json
 import os
 
 from .cache import data_dir
+from .limits import MIN_SIMILARITY, MAX_SIMILARITY
 
 RESULT_COLUMNS = (
     ('remove', 'Remove'), ('file', 'File'), ('matches', 'Matches with'), ('location', 'Location'),
@@ -39,7 +40,7 @@ class Preferences:
             raise ValueError("Invalid video profile")
         if self.comparison_position not in ('right', 'below'):
             raise ValueError('Invalid comparison position')
-        if not 70 <= self.similarity <= 99 or not 50 <= self.coverage <= 100 or self.gallery_frames not in (12, 24):
+        if not MIN_SIMILARITY <= self.similarity <= MAX_SIMILARITY or not 50 <= self.coverage <= 100 or self.gallery_frames not in (12, 24):
             raise ValueError("Invalid preference value")
         for field in ("two_folders", "recursive", "videos_only", "similar"):
             if type(getattr(self, field)) is not bool:

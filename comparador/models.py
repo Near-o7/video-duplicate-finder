@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .i18n import tr
+from .limits import MIN_SIMILARITY, MAX_SIMILARITY
 from dataclasses import dataclass, field
 from pathlib import Path
 import os
@@ -33,7 +34,7 @@ class ScanOptions:
                 raise ValueError(tr('Choose a valid secondary folder.'))
             if self.primary == self.secondary or self.primary in self.secondary.parents or self.secondary in self.primary.parents:
                 raise ValueError(tr('Choose different folders. Neither folder can be inside the other.'))
-        if not 70 <= self.similarity <= 99 or not 50 <= self.coverage <= 100:
+        if not MIN_SIMILARITY <= self.similarity <= MAX_SIMILARITY or not 50 <= self.coverage <= 100:
             raise ValueError(tr('Thresholds are outside the allowed range.'))
         if self.video_profile not in ('fast', 'full'):
             raise ValueError(tr('Unknown video profile.'))

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.4
+
+- Lowered minimum visual similarity from 70% to 50% in scan options, saved preferences and engine validation, using shared limits.
+- Kept the 90% default and existing coverage range. Applying lower thresholds reuses existing video fingerprints.
+
 ## 1.3.3
 
 - Scoped secondary no-match classification to primary reference files so failures in unrelated secondary videos no longer mark readable secondary comparisons as incomplete.
