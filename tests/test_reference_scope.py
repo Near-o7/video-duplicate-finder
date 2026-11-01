@@ -28,6 +28,7 @@ def test_secondary_absence_uses_primary_references_despite_other_failures(roots,
     assert result.comparison_finished
     assert not result.exact_complete and not result.video_complete
     assert result.files[keys['removed.jpeg']].error
+    assert result.files[keys['removed.jpeg']].missing
     assert result.files[keys['damaged.mp4']].video_error
     assert result.classification(keys['new.mp4']) == 'No matches detected'
     rows = {Path(row[0]).name: row for row in report_rows(result)}
@@ -74,3 +75,20 @@ def test_rescan_after_removed_image_keeps_other_secondary_error_separate(roots, 
     assert refreshed.exact_complete and not refreshed.video_complete
     assert refreshed.classification(keys['new.mp4']) == 'No matches detected'
     assert refreshed.display_status(keys['damaged.mp4']) == 'Video read error'
+
+
+def test_replaced_nonvideo_file_may_now_conceal_an_exact_video_copy(roots, tmp_path, media):
+    primary, secondary = roots
+    shutil.copy2(media['original'], primary / 'reference.mp4')
+    new = secondary / 'new.mp4'
+    shutil.copy2(media['different'], new)
+    replaced = primary / 'changed.jpeg'
+    replaced.write_bytes(b'original small fixture')
+    def progress(phase, *_):
+        if phase == tr('Analyzing video content') and replaced.stat().st_size < 100:
+            replaced.write_bytes(new.read_bytes())
+    result = scan(ScanOptions(primary, secondary, similar=True), progress=progress, cache_path=tmp_path / 'cache.db')
+    keys = {Path(f.path).name: key for key, f in result.files.items()}
+    assert result.files[keys['changed.jpeg']].error
+    assert not result.files[keys['changed.jpeg']].missing
+    assert result.classification(keys['new.mp4']) == 'Error or pending'

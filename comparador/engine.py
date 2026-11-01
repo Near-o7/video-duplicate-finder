@@ -140,6 +140,13 @@ def scan(options: ScanOptions, cancel=None, progress=None, cache_path=None):
             if not record.error and (not record.unchanged()):
                 record.error = tr('The file changed or disappeared during the scan. Scan again.')
                 result.exact_complete = False
+            if record.error:
+                try:
+                    Path(record.path).stat()
+                except FileNotFoundError:
+                    record.missing = True
+                except OSError:
+                    pass
         result.exact_groups = [[k for k in g if not result.files[k].error] for g in result.exact_groups]
         result.exact_groups = [g for g in result.exact_groups if len(g) > 1]
         result.similar_matches = [m for m in result.similar_matches if not result.files[m.a].error and (not result.files[m.b].error)]

@@ -53,6 +53,7 @@ class FileRecord:
     metadata: dict = field(default_factory=dict)
     fingerprint: dict = field(default_factory=dict)
     active: bool = True
+    missing: bool = False
 
     @property
     def key(self):
@@ -140,7 +141,7 @@ class ScanResult:
                 return False
             # Extensions never establish exact equality. Even an unreadable image
             # remains an uncertain exact reference when its recorded size matches.
-            if any(r.error and r.size == record.size for r in references):
+            if any(r.error and (r.size == record.size or not r.missing) for r in references):
                 return False
         if self.options.similar and record.is_video:
             if record.video_error or not record.fingerprint or not (self.video_complete or self.comparison_finished):
